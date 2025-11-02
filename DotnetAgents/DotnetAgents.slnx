@@ -1,0 +1,15 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>                 
+  <Project Path="DotnetAgents.AgentApi/DotnetAgents.AgentApi.csproj" />
+  <Project Path="DotnetAgents.ApiService/DotnetAgents.ApiService.csproj" />
+  <Project Path="DotnetAgents.AppHost/DotnetAgents.AppHost.csproj" />
+  <Project Path="DotnetAgents.ServiceDefaults/DotnetAgents.ServiceDefaults.csproj" />
+  <Project Path="DotnetAgents.Tests/DotnetAgents.Tests.csproj" />
+  <Project Path="DotnetAgents.Web/DotnetAgents.Web.csproj" />
+  <Project Path="IntelAgent.Tests/IntelAgent.Tests.csproj" />
+  <Project Path="IntelAgent/IntelAgent.csproj" />
+</Solution>
