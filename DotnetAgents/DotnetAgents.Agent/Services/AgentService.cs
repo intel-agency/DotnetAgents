@@ -1,11 +1,14 @@
-// namespace DotnetAgents.AgentApi.Services;
+namespace DotnetAgents.AgentApi.Services;
 
-// public class AgentService : IAgentService
-// {
-//     private readonly IntelAgent _agent;
 
-//     public AgentService(IntelAgent agent)
-//     {
-//         _agent = agent;
-//     }
-// }
+using IntelAgent;
+
+public class AgentService : IAgentService
+{
+    private readonly IAgent _agent;
+
+    public AgentService(IAgent agent)
+    {
+        _agent = agent;
+    }
+}

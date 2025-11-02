@@ -1,5 +1,6 @@
 using DotnetAgents.Agent.Models;
 using Microsoft.AspNetCore.Mvc;
+using DotnetAgents.AgentApi.Services;
 
 namespace DotnetAgents.Agent.Controllers;
 
@@ -11,10 +12,12 @@ namespace DotnetAgents.Agent.Controllers;
 public class AgentController : ControllerBase
 {
     private readonly ILogger<AgentController> _logger;
+    private readonly IAgentService _agentService;
 
-    public AgentController(ILogger<AgentController> logger)
+    public AgentController(ILogger<AgentController> logger, IAgentService agentService)
     {
         _logger = logger;
+        _agentService = agentService;
     }
 
     /// <summary>

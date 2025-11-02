@@ -4,6 +4,7 @@ using DotnetAgents.AgentApi.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using OpenAI;
+using IntelAgent;
 
 IConfigurationRoot config = new ConfigurationBuilder()
     .AddUserSecrets<Program>()
@@ -11,12 +12,31 @@ IConfigurationRoot config = new ConfigurationBuilder()
 string? model = config["ModelName"];
 string? key = config["OpenAIKey"];
 
-
-
 var builder = WebApplication.CreateSlimBuilder(args);
 
+builder.Services.AddSingleton<IAgent>(sp =>
+{
+    if (string.IsNullOrEmpty(key))
+    {
+        throw new InvalidOperationException("OpenAI API key is not configured. Please set the 'OpenAIKey' in user secrets.");
+    }
+
+    if (string.IsNullOrEmpty(model))
+    {
+        throw new InvalidOperationException("Model name is not configured. Please set the 'ModelName' in user secrets.");
+    }
+
+    return new Agent(key, model);
+});
+
+builder.Services.AddSingleton<IAgentService, AgentService>(sp =>
+{
+    var agent = sp.GetRequiredService<IAgent>();
+    return new AgentService(agent);
+});
+
 // Add services to the container
-//  builder.Services.AddControllers();
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {

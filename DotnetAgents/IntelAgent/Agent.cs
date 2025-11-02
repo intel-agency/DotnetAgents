@@ -1,11 +1,10 @@
 ﻿using Microsoft.Extensions.AI;
 using System.ClientModel;
 using OpenAI;
-using OpenAI.Chat;
 
 namespace IntelAgent;
 
-public class Agent
+public class Agent : IAgent
 {
     private readonly IChatClient _client;
 
@@ -15,14 +14,14 @@ public class Agent
         {
             Endpoint = new Uri(endpoint ?? "https://openrouter.ai/api/v1")
         };
-        
+
         var openAiClient = new OpenAIClient(new ApiKeyCredential(key), clientOptions);
-        
+
         // OpenRouter expects the model name without the "openrouter/" prefix
-        var modelName = model.StartsWith("openrouter/", StringComparison.OrdinalIgnoreCase) 
-            ? model.Substring("openrouter/".Length) 
+        var modelName = model.StartsWith("openrouter/", StringComparison.OrdinalIgnoreCase)
+            ? model.Substring("openrouter/".Length)
             : model;
-            
+
         _client = openAiClient.GetChatClient(modelName).AsIChatClient();
     }
 
