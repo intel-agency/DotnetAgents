@@ -17,8 +17,8 @@ public class UnitTest1
         var agent = new Agent(key!, model!);
         Assert.NotNull(agent);
 
-        var response = await agent.GetResponseAsync("The meaning of life, the universe and everything?");
+        var response = await agent.PromptAgentAsync("The meaning of life, the universe and everything?");
         Assert.NotNull(response);
-        Assert.NotEmpty(response.Messages);
+        Assert.NotEmpty(response);
     }
 }

@@ -6,5 +6,5 @@ namespace IntelAgent;
 
 public interface IAgent
 {
-    Task<ChatResponse> GetResponseAsync(string prompt);
+    Task<string> PromptAgentAsync(string prompt);
 }

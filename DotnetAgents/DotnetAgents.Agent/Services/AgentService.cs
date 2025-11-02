@@ -11,4 +11,10 @@ public class AgentService : IAgentService
     {
         _agent = agent;
     }
+
+    public async Task<string> PromptAgentAsync(string prompt)
+    {
+        var response = await _agent.PromptAgentAsync(prompt);
+        return response.ToString();
+    }
 }

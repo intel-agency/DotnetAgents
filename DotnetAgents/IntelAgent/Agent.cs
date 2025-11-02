@@ -25,7 +25,12 @@ public class Agent : IAgent
         _client = openAiClient.GetChatClient(modelName).AsIChatClient();
     }
 
-    public async Task<ChatResponse> GetResponseAsync(string prompt)
+    public async Task<string> PromptAgentAsync(string prompt)
+    {
+        return (await GetResponseAsync(prompt)).ToString();
+    }
+
+    private async Task<ChatResponse> GetResponseAsync(string prompt)
     {
         string text = "Life the universe, and everything";//File.ReadAllText("benefits.md");
         string promptToSend = $"""

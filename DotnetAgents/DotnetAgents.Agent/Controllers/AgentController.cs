@@ -28,7 +28,7 @@ public class AgentController : ControllerBase
     [HttpPost("prompt")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public IActionResult PromptAgent([FromBody] PromptAgentRequest request)
+    public async Task<IActionResult> PromptAgent([FromBody] PromptAgentRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Prompt))
         {
@@ -39,21 +39,7 @@ public class AgentController : ControllerBase
 
         try
         {
-            // TODO: Implement actual agent logic here
-            var response = new
-            {
-                success = true,
-                prompt = request.Prompt,
-                response = $"Agent received prompt: {request.Prompt}",
-                timestamp = DateTime.UtcNow,
-                metadata = new
-                {
-                    maxTokens = request.MaxTokens,
-                    temperature = request.Temperature,
-                    contextKeys = request.Context?.Keys.ToArray()
-                }
-            };
-
+            var response = await _agentService.PromptAgentAsync(request.Prompt);
             return Ok(response);
         }
         catch (Exception ex)
