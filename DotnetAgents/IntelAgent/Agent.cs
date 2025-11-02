@@ -1,12 +1,14 @@
 ﻿using Microsoft.Extensions.AI;
 using System.ClientModel;
 using OpenAI;
+using IntelAgent.Model;
 
 namespace IntelAgent;
 
 public class Agent : IAgent
 {
     private readonly IChatClient _client;
+    private readonly Queue<AgentResponseRequest> _requestQueue = new();
 
     public Agent(string key, string model, string? endpoint = null)
     {
@@ -25,9 +27,14 @@ public class Agent : IAgent
         _client = openAiClient.GetChatClient(modelName).AsIChatClient();
     }
 
-    public async Task<string> PromptAgentAsync(string prompt)
+    public async Task<string> PromptAgentAsync(AgentResponseRequest request)
     {
-        return (await GetResponseAsync(prompt)).ToString();
+        return (await GetResponseAsync(request.Prompt)).ToString();
+    }
+
+    public Task<string> RequestPromptAgentAsync(AgentResponseRequest request)
+    {
+        throw new NotImplementedException();
     }
 
     private async Task<ChatResponse> GetResponseAsync(string prompt)

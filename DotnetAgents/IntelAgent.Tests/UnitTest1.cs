@@ -1,6 +1,10 @@
 ﻿
 namespace IntelAgent.Tests;
 
+using IntelAgent;
+using IntelAgent.Model;
+
+
 public class UnitTest1
 {
     [Fact]
@@ -17,7 +21,11 @@ public class UnitTest1
         var agent = new Agent(key!, model!);
         Assert.NotNull(agent);
 
-        var response = await agent.PromptAgentAsync("The meaning of life, the universe and everything?");
+        var response = await agent.PromptAgentAsync(new AgentResponseRequest
+        {
+            Prompt = "The meaning of life, the universe and everything?",
+            Id = 1
+        });
         Assert.NotNull(response);
         Assert.NotEmpty(response);
     }

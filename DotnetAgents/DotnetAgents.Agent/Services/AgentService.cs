@@ -2,6 +2,7 @@ namespace DotnetAgents.AgentApi.Services;
 
 
 using IntelAgent;
+using IntelAgent.Model;
 
 public class AgentService : IAgentService
 {
@@ -12,9 +13,9 @@ public class AgentService : IAgentService
         _agent = agent;
     }
 
-    public async Task<string> PromptAgentAsync(string prompt)
+    public async Task<string> PromptAgentAsync(AgentResponseRequest request)
     {
-        var response = await _agent.PromptAgentAsync(prompt);
+        var response = await _agent.PromptAgentAsync(request);
         return response.ToString();
     }
 }

@@ -1,6 +1,8 @@
 using DotnetAgents.Agent.Models;
 using Microsoft.AspNetCore.Mvc;
 using DotnetAgents.AgentApi.Services;
+using IntelAgent;
+using IntelAgent.Model;
 
 namespace DotnetAgents.Agent.Controllers;
 
@@ -39,7 +41,10 @@ public class AgentController : ControllerBase
 
         try
         {
-            var response = await _agentService.PromptAgentAsync(request.Prompt);
+            var response = await _agentService.PromptAgentAsync(new AgentResponseRequest
+            {
+                Prompt = request.Prompt,               
+            });
             return Ok(response);
         }
         catch (Exception ex)
