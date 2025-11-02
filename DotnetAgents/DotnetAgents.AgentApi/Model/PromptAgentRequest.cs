@@ -1,4 +1,4 @@
-namespace DotnetAgents.Agent.Models;
+namespace DotnetAgents.AgentApi.Model;
 
 /// <summary>
 /// DTO for agent prompt requests
@@ -23,5 +23,5 @@ public class PromptAgentRequest
     /// <summary>
     /// Temperature for response generation (0.0 to 1.0)
     /// </summary>
-    public double? Temperature { get; set; }
+    public double? Temperature { get; set; } = 0.1d;
 }

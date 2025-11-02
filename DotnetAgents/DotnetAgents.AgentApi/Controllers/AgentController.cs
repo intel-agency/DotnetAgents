@@ -1,17 +1,17 @@
-using DotnetAgents.Agent.Models;
 using Microsoft.AspNetCore.Mvc;
 using DotnetAgents.AgentApi.Services;
 using IntelAgent;
 using IntelAgent.Model;
+using DotnetAgents.AgentApi.Model;
 
-namespace DotnetAgents.Agent.Controllers;
+namespace DotnetAgents.AgentApi.Controllers;
 
 /// <summary>
 /// Controller for agent operations
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-public class AgentController : ControllerBase
+public class AgentController : ControllerBase, IAgentController
 {
     private readonly ILogger<AgentController> _logger;
     private readonly IAgentService _agentService;
@@ -43,7 +43,7 @@ public class AgentController : ControllerBase
         {
             var response = await _agentService.PromptAgentAsync(new AgentResponseRequest
             {
-                Prompt = request.Prompt,               
+                Prompt = request.Prompt,
             });
             return Ok(response);
         }
