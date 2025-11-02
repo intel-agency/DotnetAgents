@@ -1,0 +1,29 @@
+[
+  {
+    "label": "Build DotnetAgents/DotnetAgents.sln",
+    "command": "dotnet",
+    "args": ["build", "DotnetAgents/DotnetAgents.sln"]
+  },
+  {
+    "label": "build",
+    "command": "dotnet",
+    "args": [
+      "build",
+      "/Users/xxx/Repositories/xxx/services/xxx/service/service.csproj"
+    ]
+  },
+  {
+    "label": "build worktree troot",
+    "command": "dotnet",
+    "show_command": true,
+    "args": ["build"],
+    "cwd": "$ZED_WORKTREE_ROOT"
+  },
+  {
+    "label": "build ",
+    "command": "dotnet",
+    "show_command": true,
+    "args": ["build"],
+    "cwd": "$ZED_WORKTREE_ROOT"
+  }
+]
