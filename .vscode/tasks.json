@@ -11,5 +11,35 @@
 			"problemMatcher": [],
 			"label": "dotnet: build"
 		},
+		{
+			"label": "build: Debug",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"build",
+				"${workspaceFolder}/DotnetAgents/DotnetAgents.slnx",
+				"--configuration",
+				"Debug"
+			],
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"group": "build"
+		},
+		{
+			"label": "build: Release",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"build",
+				"${workspaceFolder}/DotnetAgents/DotnetAgents.slnx",
+				"--configuration",
+				"Release"
+			],
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"group": "build"
+		}
 	]
 }
