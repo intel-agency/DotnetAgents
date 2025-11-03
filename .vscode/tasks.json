@@ -5,8 +5,7 @@
 			"type": "dotnet",
 			"task": "build",
 			"group": {
-				"kind": "build",
-				"isDefault": true
+				"kind": "build"
 			},
 			"problemMatcher": [],
 			"label": "dotnet: build"
@@ -24,7 +23,10 @@
 			"problemMatcher": [
 				"$msCompile"
 			],
-			"group": "build"
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
 		},
 		{
 			"label": "build: Release",
