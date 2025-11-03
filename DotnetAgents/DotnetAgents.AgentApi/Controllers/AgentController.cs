@@ -30,7 +30,7 @@ public class AgentController : ControllerBase, IAgentController
     [HttpPost("prompt")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> PromptAgent([FromBody] PromptAgentRequest request)
+    public async Task<ActionResult<PromptAgentResponse>> PromptAgent([FromBody] PromptAgentRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Prompt))
         {
@@ -45,7 +45,13 @@ public class AgentController : ControllerBase, IAgentController
             {
                 Prompt = request.Prompt,
             });
-            return Ok(response);
+
+            PromptAgentResponse response1 = new()
+            {
+                Response = response
+            };
+
+            return Ok(response1);
         }
         catch (Exception ex)
         {

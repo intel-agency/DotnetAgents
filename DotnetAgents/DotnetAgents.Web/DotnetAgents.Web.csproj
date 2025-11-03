@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DotnetAgents.ServiceDefaults\DotnetAgents.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\DotnetAgents.AgentApi\DotnetAgents.AgentApi.csproj" />
   </ItemGroup>
 
 </Project>

@@ -3,14 +3,16 @@ var builder = DistributedApplication.CreateBuilder(args);
 var apiService = builder.AddProject<Projects.DotnetAgents_ApiService>("apiservice")
     .WithHttpHealthCheck("/health");
 
-builder.AddProject<Projects.DotnetAgents_AgentApi>("agentapi")
+var agentApi = builder.AddProject<Projects.DotnetAgents_AgentApi>("agentapi")
     .WithExternalHttpEndpoints()
-    .WithHttpHealthCheck("/health");
+    .WithHttpHealthCheck("/api/agent/health");
 
 builder.AddProject<Projects.DotnetAgents_Web>("webfrontend")
     .WithExternalHttpEndpoints()
     .WithHttpHealthCheck("/health")
     .WithReference(apiService)
-    .WaitFor(apiService);
+    .WithReference(agentApi)
+    .WaitFor(apiService)
+    .WaitFor(agentApi);
 
 builder.Build().Run();
