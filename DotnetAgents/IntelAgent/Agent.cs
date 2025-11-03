@@ -39,9 +39,9 @@ public class Agent : IAgent
 
     private async Task<ChatResponse> GetResponseAsync(string prompt)
     {
-        string text = "Life the universe, and everything";//File.ReadAllText("benefits.md");
+        string text = prompt;
         string promptToSend = $"""
-            Summarize the the following text in 20 words or less:
+            Respond to the following text:
             {text}
             """;
 
