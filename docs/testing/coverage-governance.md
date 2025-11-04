@@ -10,13 +10,13 @@ This document defines how DotnetAgents manages code coverage baselines, threshol
 
 ## Baseline Process
 
-1. First two successful environment runs capture baseline metrics and write them to `coverage-baseline.json`.
+1. First two successful environment runs capture baseline metrics and write them to `coverage-baseline.json` (including optional `minimumLine`/`minimumBranch` gates).
 2. The baseline file is stored in the repository to enable deterministic gating.
 3. After team approval, trigger the `promote-coverage-baseline` workflow to update the baseline from the latest passing run.
 
 ## Thresholds
 
-- Phase 1: Only catastrophic regressions (<50% line coverage overall) fail the build.
+- Phase 1: The minimum coverage gates remain disabled until `minimumLine`/`minimumBranch` are explicitly set (or baseline reaches ≥50%).
 - Phase 2: Once the baseline is established, the regression script enforces `baseline - 2%` for line and branch coverage.
 - Projects may opt into stricter thresholds by updating the runsettings file and regression script inputs.
 

@@ -1,4 +1,5 @@
-﻿
+﻿using System;
+using System.IO;
 using IntelAgent;
 using IntelAgent.Model;
 using Xunit;
@@ -66,5 +67,6 @@ public class AgentTests
         });
 
         Assert.False(string.IsNullOrWhiteSpace(response));
+        Assert.Contains("pong", response, StringComparison.OrdinalIgnoreCase);
     }
 }

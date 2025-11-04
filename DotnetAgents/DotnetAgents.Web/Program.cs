@@ -18,6 +18,8 @@ builder.Services.AddHttpClient<AgentApiClient>(client =>
         // This URL uses "https+http://" to indicate HTTPS is preferred over HTTP.
         // Learn more about service discovery scheme resolution at https://aka.ms/dotnet/sdschemes.
         client.BaseAddress = new("https+http://agentapi");
+        // Increase the timeout globally for AgentApiClient calls (default is 100s; set >30s as requested).
+        client.Timeout = TimeSpan.FromMinutes(2);
     });
 
 // Register the agent client service

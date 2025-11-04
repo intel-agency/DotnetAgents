@@ -11,5 +11,7 @@
   <Project Path="DotnetAgents.Tests/DotnetAgents.Tests.csproj" />
   <Project Path="DotnetAgents.Web/DotnetAgents.Web.csproj" />
   <Project Path="IntelAgent.Tests/IntelAgent.Tests.csproj" />
+<Project Path="IntelAgent.LiveProbe/IntelAgent.LiveProbe.csproj" />
+
   <Project Path="IntelAgent/IntelAgent.csproj" />
 </Solution>

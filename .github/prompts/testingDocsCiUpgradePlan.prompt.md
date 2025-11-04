@@ -161,10 +161,10 @@ Strengthen chat-focused testing, enforce XML documentation, and wire DocFX plus 
 - **Landing page layout:** Determine navigation for `/development`, `/staging`, `/production` and integrate coverage trend visualization fed by JSON history.
 
 ### Todo Checklist
-- [ ] Catalogue current test gaps and undocumented public APIs for chat flow (owners: Backend, Frontend, QA).
-- [ ] Record OpenAI transcripts, implement fake/live client swap, and document replay fixtures.
-- [ ] Finalize coverlet.runsettings, baseline capture process, and regression script.
-- [ ] Script coverage-history reducer and integrate artifact retention + concurrency safeguards.
+- [x] Catalogue current test gaps and undocumented public APIs for chat flow (owners: Backend, Frontend, QA).
+- [x] Record OpenAI transcripts, implement fake/live client swap, and document replay fixtures.
+- [x] Finalize coverlet.runsettings, baseline capture process, and regression script.
+- [x] Script coverage-history reducer and integrate artifact retention + concurrency safeguards.
 - [ ] Sequence DocFX rollout per sprint and publish documentation debt tracker.
 - [ ] Implement GitHub Actions build/test and deploy workflows with Pages integration and badge generation.
 - [ ] Refresh README/docs and new ops guides for testing, DocFX, versioning, and secrets usage.

@@ -9,7 +9,7 @@ public class Agent : IAgent
 
     public Agent(IChatCompletionClient chatClient)
     {
-        _chatClient = chatClient ?? throw new ArgumentNullException(nameof(chatClient));
+        _chatClient = chatClient ??  throw new ArgumentNullException(nameof(chatClient));
     }
 
     public Agent(string key, string model, string? endpoint = null)

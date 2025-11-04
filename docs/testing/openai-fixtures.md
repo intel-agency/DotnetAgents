@@ -25,9 +25,10 @@ Fixtures live under `tests/fixtures/openai/` and follow the naming pattern `<sce
 
 ## Recording a Fixture
 
-1. Run the live smoke test workflow (`.github/workflows/live-model-smoke.yml`) with `mode: record`.
-2. The workflow captures the full JSON transcript, masks secrets, and uploads the artifact.
-3. Download the artifact locally, review for PII, then commit into the fixture directory.
+1. Trigger the [`Live Model Smoke Test`](../../.github/workflows/live-model-smoke.yml) workflow with `workflow_dispatch` (or allow the daily schedule to run).
+2. The workflow executes the `IntelAgent.LiveProbe` console, which uses the `ILiveModelProbe` interface to call the upstream model with redacted logging (`***redacted***`).
+3. For fixture refreshes, run `dotnet run --project DotnetAgents/DotnetAgents/IntelAgent.LiveProbe` locally with the required secrets exported, capture the JSON payload, review for PII, and copy the sanitized transcript into `tests/fixtures/openai/`.
+4. Update this document with the fixture name, the run URL, and the reason for the refresh.
 
 ## Using Fixtures in Tests
 
@@ -38,6 +39,7 @@ Fixtures live under `tests/fixtures/openai/` and follow the naming pattern `<sce
 
 - Refresh fixtures quarterly or when APIs change significantly.
 - Create a PR documenting why fixtures changed and link to the live workflow run.
+- Redact sensitive literals in both prompts and responses before committing (replace with `***redacted***`).
 - Remove superseded fixtures to minimize repository bloat.
 
 Keeping fixtures up to date balances reliable tests with the ability to detect regressions when the external model evolves.
