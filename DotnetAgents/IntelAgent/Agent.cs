@@ -1,49 +1,35 @@
-﻿using Microsoft.Extensions.AI;
-using System.ClientModel;
-using OpenAI;
-using IntelAgent.Model;
+﻿using IntelAgent.Model;
+using Microsoft.Extensions.AI;
 
 namespace IntelAgent;
 
 public class Agent : IAgent
 {
-    private readonly IChatClient _chatClient;
-    private readonly Queue<AgentResponseRequest> _requestQueue = new();
+    private readonly IChatCompletionClient _chatClient;
 
-    public Agent(string key, string model, string? endpoint = null)
+    public Agent(IChatCompletionClient chatClient)
     {
-        _chatClient = CreateChatClient(key, model, endpoint);
+        _chatClient = chatClient ?? throw new ArgumentNullException(nameof(chatClient));
     }
 
-    private IChatClient CreateChatClient(string key, string model, string? endpoint)
+    public Agent(string key, string model, string? endpoint = null)
+        : this(new OpenAiChatCompletionClient(key, model, endpoint))
     {
-        var clientOptions = new OpenAIClientOptions
-        {
-            Endpoint = new Uri(endpoint ?? "https://openrouter.ai/api/v1")
-        };
-
-        var openAiClient = new OpenAIClient(new ApiKeyCredential(key), clientOptions);
-
-        // OpenRouter expects the model name without the "openrouter/" prefix
-        var modelName = model.StartsWith("openrouter/", StringComparison.OrdinalIgnoreCase)
-            ? model.Substring("openrouter/".Length)
-            : model;
-
-        return openAiClient.GetChatClient(modelName).AsIChatClient();
     }
 
     public Agent()
+        : this(CreateFromEnvironment())
     {
-        var key = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-        var model = Environment.GetEnvironmentVariable("OPENAI_MODEL_NAME");
-        var endpoint = Environment.GetEnvironmentVariable("OPENAI_ENDPOINT");
-
-       _chatClient = CreateChatClient(key, model, endpoint);
     }
 
     public async Task<string> PromptAgentAsync(AgentResponseRequest request)
     {
-        return (await GetResponseAsync(request.Prompt)).ToString();
+        if (request is null)
+        {
+            throw new ArgumentNullException(nameof(request));
+        }
+
+        return await GetResponseAsync(request.Prompt);
     }
 
     public Task<string> RequestPromptAgentAsync(AgentResponseRequest request)
@@ -51,19 +37,26 @@ public class Agent : IAgent
         throw new NotImplementedException();
     }
 
-    private async Task<ChatResponse> GetResponseAsync(string prompt)
+    private Task<string> GetResponseAsync(string prompt)
     {
-        string text = prompt;
-        string promptToSend = $"""
-            Respond to the following text:
-            {text}
-            """;
+        ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
 
-        // Submit the prompt and print out the response.
-        var response = await _chatClient.GetResponseAsync(promptToSend, new ChatOptions { MaxOutputTokens = 400 });
+        return _chatClient.GetResponseAsync(
+            prompt,
+            new ChatOptions { MaxOutputTokens = 400 });
+    }
 
-        Console.WriteLine(response);
+    private static IChatCompletionClient CreateFromEnvironment()
+    {
+        var key = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+        var model = Environment.GetEnvironmentVariable("OPENAI_MODEL_NAME");
+        var endpoint = Environment.GetEnvironmentVariable("OPENAI_ENDPOINT");
 
-        return response;
+        if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(model))
+        {
+            throw new InvalidOperationException("OpenAI credentials are not configured. Provide OPENAI_API_KEY and OPENAI_MODEL_NAME.");
+        }
+
+        return new OpenAiChatCompletionClient(key!, model!, endpoint);
     }
 }

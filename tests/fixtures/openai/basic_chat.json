@@ -1,0 +1,20 @@
+{
+    "metadata": {
+        "model": "openrouter/anthropic/claude-3.5-sonnet",
+        "created": "2025-10-31T18:42:00Z",
+        "tags": [
+            "web",
+            "happy-path"
+        ]
+    },
+    "transcript": [
+        {
+            "prompt": "Hello agent!",
+            "response": "Hello! How can I assist you today?"
+        },
+        {
+            "prompt": "What is your favorite framework?",
+            "response": "I’m partial to ASP.NET Core—it’s fast, modular, and great for building APIs."
+        }
+    ]
+}

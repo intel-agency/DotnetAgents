@@ -1,4 +1,3 @@
-using DotnetAgents.AgentApi.Controllers;
 using DotnetAgents.AgentApi.Services;
 using IntelAgent;
 
@@ -18,29 +17,8 @@ builder.Services.AddProblemDetails();
 // string? key = config["OpenAIKey"];
 
 
-// builder.Services.AddSingleton<IAgent>(sp =>
-// {
-//     if (string.IsNullOrEmpty(key))
-//     {
-//         throw new InvalidOperationException("OpenAI API key is not configured. Please set the 'OpenAIKey' in user secrets.");
-//     }
-
-//     if (string.IsNullOrEmpty(model))
-//     {
-//         throw new InvalidOperationException("Model name is not configured. Please set the 'ModelName' in user secrets.");
-//     }
-
-//     return new Agent(key, model);
-// });
-
-// builder.Services.AddSingleton<IAgentService, AgentService>(sp =>
-// {
-//     var agent = sp.GetRequiredService<IAgent>();
-//     return new AgentService(agent);
-// });
-
+builder.Services.AddAgentCore(builder.Configuration);
 builder.Services.AddSingleton<IAgentService, AgentService>();
-builder.Services.AddSingleton<IAgentController, AgentController>();
 builder.Services.AddControllers();
 
 // Add services to the container.

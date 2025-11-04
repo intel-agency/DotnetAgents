@@ -1,0 +1,43 @@
+{
+    "metadata": [
+        {
+            "src": [
+                {
+                    "files": [
+                        "../../DotnetAgents/DotnetAgents.AgentApi/DotnetAgents.AgentApi.csproj"
+                    ]
+                }
+            ],
+            "dest": "api/agentapi",
+            "properties": {
+                "TargetFramework": "net9.0"
+            }
+        }
+    ],
+    "build": {
+        "content": [
+            {
+                "files": [
+                    "api/**.yml",
+                    "api/index.md"
+                ]
+            },
+            {
+                "files": [
+                    "articles/**.md"
+                ]
+            }
+        ],
+        "resource": [
+            {
+                "files": [
+                    "styles/**"
+                ]
+            }
+        ],
+        "globalMetadata": {
+            "_appTitle": "DotnetAgents API Documentation"
+        },
+        "dest": "_site"
+    }
+}
