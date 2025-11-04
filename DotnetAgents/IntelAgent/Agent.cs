@@ -7,10 +7,15 @@ namespace IntelAgent;
 
 public class Agent : IAgent
 {
-    private readonly IChatClient _client;
+    private readonly IChatClient _chatClient;
     private readonly Queue<AgentResponseRequest> _requestQueue = new();
 
     public Agent(string key, string model, string? endpoint = null)
+    {
+        _chatClient = CreateChatClient(key, model, endpoint);
+    }
+
+    private IChatClient CreateChatClient(string key, string model, string? endpoint)
     {
         var clientOptions = new OpenAIClientOptions
         {
@@ -24,7 +29,16 @@ public class Agent : IAgent
             ? model.Substring("openrouter/".Length)
             : model;
 
-        _client = openAiClient.GetChatClient(modelName).AsIChatClient();
+        return openAiClient.GetChatClient(modelName).AsIChatClient();
+    }
+
+    public Agent()
+    {
+        var key = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+        var model = Environment.GetEnvironmentVariable("OPENAI_MODEL_NAME");
+        var endpoint = Environment.GetEnvironmentVariable("OPENAI_ENDPOINT");
+
+       _chatClient = CreateChatClient(key, model, endpoint);
     }
 
     public async Task<string> PromptAgentAsync(AgentResponseRequest request)
@@ -46,7 +60,7 @@ public class Agent : IAgent
             """;
 
         // Submit the prompt and print out the response.
-        var response = await _client.GetResponseAsync(promptToSend, new ChatOptions { MaxOutputTokens = 400 });
+        var response = await _chatClient.GetResponseAsync(promptToSend, new ChatOptions { MaxOutputTokens = 400 });
 
         Console.WriteLine(response);
 
