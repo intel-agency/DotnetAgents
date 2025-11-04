@@ -20,11 +20,17 @@ builder.Services.AddHttpClient<AgentApiClient>(client =>
         client.BaseAddress = new("https+http://agentapi");
         // Increase the timeout globally for AgentApiClient calls (default is 100s; set >30s as requested).
         client.Timeout = TimeSpan.FromMinutes(2);
+    })
+    .AddStandardResilienceHandler(options =>
+    {
+        // Disable automatic retries to avoid duplicate prompt submissions in UI
+        options.Retry.MaxRetryAttempts = 0;
+        // Optionally, increase overall attempt timeout to align with HttpClient timeout
+        options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(2);
     });
 
 // Register the agent client service
 builder.Services.AddScoped<IAgentClientService, AgentClientService>();
-
 
 
 var app = builder.Build();

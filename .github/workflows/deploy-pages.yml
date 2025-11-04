@@ -1,0 +1,106 @@
+name: Deploy Environment Pages
+
+on:
+    workflow_run:
+        workflows:
+            - Environment CI (Docs & Coverage)
+        types:
+            - completed
+
+permissions:
+    contents: read
+    pages: write
+    id-token: write
+
+concurrency:
+    group: pages-${{ github.event.workflow_run.head_branch }}
+    cancel-in-progress: false
+
+jobs:
+    deploy:
+        if: >-
+            github.repository_owner == 'intel-agency' &&
+            github.event.workflow_run.conclusion == 'success'
+        runs-on: ubuntu-22.04
+        environment:
+          name: 'github-pages'
+            url: ${{ steps.deploy-pages.outputs.page_url }}
+        steps:
+            - name: Download Pages bundle
+              uses: actions/download-artifact@v4
+              with:
+                  name: pages-bundle
+                  run-id: ${{ github.event.workflow_run.id }}
+
+            - name: Extract bundle
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  tar -xzf pages-bundle.tgz
+
+            - name: Inspect coverage summary
+              id: summary
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  SUMMARY="artifacts/coverage/summary.json"
+                  if [[ ! -f "$SUMMARY" ]]; then
+                    echo "Coverage summary not found in bundle." >&2
+                    exit 1
+                  fi
+                  BRANCH=$(jq -r '.branch // empty' "$SUMMARY")
+                  VERSION=$(jq -r '.version // empty' "$SUMMARY")
+                  if [[ -z "$BRANCH" || -z "$VERSION" ]]; then
+                    echo "Coverage summary is missing branch/version metadata." >&2
+                    exit 1
+                  fi
+                  echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+                  echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+            - name: Stage site content
+              id: stage
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  BRANCH='${{ steps.summary.outputs.branch }}'
+                  VERSION='${{ steps.summary.outputs.version }}'
+                  ROOT="site/pages/${BRANCH}"
+                  TARGET="${ROOT}/${VERSION}"
+                  mkdir -p "$TARGET"
+
+                  # Place documentation bundle
+                  mkdir -p "$TARGET/docs"
+                  cp -R docs/_site/. "$TARGET/docs/"
+
+                  # Place coverage assets
+                  mkdir -p "$TARGET/coverage"
+                  cp -R artifacts/coverage/. "$TARGET/coverage/"
+
+                  # Branch-level metadata
+                  mkdir -p "$ROOT"
+                  cp "$TARGET/coverage/coverage-history.json" "$ROOT/coverage-history.json"
+
+                  LINE=$(jq '.line' artifacts/coverage/summary.json)
+                  BRANCH_PCT=$(jq '.branch' artifacts/coverage/summary.json)
+                  GENERATED=$(jq -r '.timestamp' artifacts/coverage/summary.json)
+
+                  jq -n \
+                    --arg branch "$BRANCH" \
+                    --arg version "$VERSION" \
+                    --arg generated "$GENERATED" \
+                    --argjson line "$LINE" \
+                    --argjson branchPct "$BRANCH_PCT" \
+                    '{ branch: $branch, version: $version, generatedAt: $generated, coverage: { line: $line, branch: $branchPct } }' \
+                    > "$ROOT/badge-status.json"
+
+            - name: Configure GitHub Pages
+              uses: actions/configure-pages@v5
+
+            - name: Upload artifact
+              uses: actions/upload-pages-artifact@v3
+              with:
+                  path: site
+
+            - name: Deploy to GitHub Pages
+              id: deploy-pages
+              uses: actions/deploy-pages@v4

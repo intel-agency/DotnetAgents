@@ -166,7 +166,7 @@ Strengthen chat-focused testing, enforce XML documentation, and wire DocFX plus 
 - [x] Finalize coverlet.runsettings, baseline capture process, and regression script.
 - [x] Script coverage-history reducer and integrate artifact retention + concurrency safeguards.
 - [ ] Sequence DocFX rollout per sprint and publish documentation debt tracker.
-- [ ] Implement GitHub Actions build/test and deploy workflows with Pages integration and badge generation.
+- [x] Implement GitHub Actions build/test and deploy workflows with Pages integration and badge generation.
 - [ ] Refresh README/docs and new ops guides for testing, DocFX, versioning, and secrets usage.
 - [ ] Publish `.env.example`, environment variable guidance, and developer bootstrap instructions.
 - [ ] Define badge rendering pipeline and GitHub Pages navigation layout.

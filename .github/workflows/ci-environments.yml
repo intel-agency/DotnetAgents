@@ -1,0 +1,153 @@
+name: Environment CI (Docs & Coverage)
+
+on:
+    push:
+        branches:
+            - development
+            - staging
+            - production
+    workflow_dispatch:
+
+permissions:
+    contents: read
+    actions: read
+
+concurrency:
+    group: coverage-${{ github.ref }}
+    cancel-in-progress: false
+
+jobs:
+    build:
+        if: github.repository_owner == 'intel-agency'
+        runs-on: ubuntu-22.04
+        env:
+            DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+            DOTNET_NOLOGO: "1"
+            DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
+            OPENAI_FIXTURE_PATH: tests/fixtures/openai/basic_chat.json
+            VERSION_PREFIX: ${{ secrets.VERSION_PREFIX }}
+            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Setup .NET SDK
+              uses: actions/setup-dotnet@v4
+              with:
+                  global-json-file: global.json
+
+            - name: Install DocFX
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  dotnet tool update --global docfx --version 2.77.0
+                  echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+            - name: Compute version metadata
+              id: metadata
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  BRANCH="${GITHUB_REF_NAME}"
+                  PREFIX="${VERSION_PREFIX}"
+                  if [[ -z "$PREFIX" ]]; then
+                    echo "VERSION_PREFIX secret is required for environment deployments." >&2
+                    exit 1
+                  fi
+                  if [[ ! "$PREFIX" =~ ^[0-9]+\.[0-9]+$ ]]; then
+                    echo "VERSION_PREFIX must match the pattern <major>.<minor> (e.g., 2025.11)." >&2
+                    exit 1
+                  fi
+                  VERSION_TAG="${BRANCH}-${PREFIX}.${GITHUB_RUN_NUMBER}"
+                  echo "branch_name=${BRANCH}" >> "$GITHUB_ENV"
+                  echo "version_prefix=${PREFIX}" >> "$GITHUB_ENV"
+                  echo "version_tag=${VERSION_TAG}" >> "$GITHUB_ENV"
+                  echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+                  echo "version_prefix=${PREFIX}" >> "$GITHUB_OUTPUT"
+                  echo "version_tag=${VERSION_TAG}" >> "$GITHUB_OUTPUT"
+
+            - name: Restore dependencies
+              run: dotnet restore DotnetAgents/DotnetAgents.slnx
+
+            - name: Build solution
+              run: dotnet build DotnetAgents/DotnetAgents.slnx --configuration Release --no-restore
+
+            - name: Run tests with coverage
+              run: dotnet test DotnetAgents/DotnetAgents.slnx --configuration Release --no-build --settings .config/dotnet/test.runsettings --collect:"XPlat Code Coverage"
+
+            - name: Build documentation site
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  rm -rf docs/_site
+                  docfx build docs/docfx/docfx.json --output docs/_site
+
+            - name: Locate coverage artifacts
+              id: coverage
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  COVERAGE_JSON=$(find .config/dotnet/TestResults -name coverage.json -print -quit)
+                  if [[ -z "$COVERAGE_JSON" ]]; then
+                    echo "Coverage JSON not found" >&2
+                    exit 1
+                  fi
+                  COVERAGE_DIR=$(dirname "$COVERAGE_JSON")
+                  mkdir -p artifacts/coverage
+                  cp "$COVERAGE_JSON" artifacts/coverage/coverage.json
+                  if [[ -f "$COVERAGE_DIR/coverage.cobertura.xml" ]]; then
+                    cp "$COVERAGE_DIR/coverage.cobertura.xml" artifacts/coverage/coverage.cobertura.xml
+                  fi
+                  if [[ -d "$COVERAGE_DIR/coverage" ]]; then
+                    cp -R "$COVERAGE_DIR/coverage" artifacts/coverage/html
+                  fi
+                  echo "json_path=artifacts/coverage/coverage.json" >> "$GITHUB_OUTPUT"
+
+            - name: Export coverage summary
+              shell: pwsh
+              run: |
+                  scripts/coverage/export-summary.ps1 `
+                    -CoverageJsonPath '${{ steps.coverage.outputs.json_path }}' `
+                    -Branch '${{ steps.metadata.outputs.branch }}' `
+                    -Version '${{ steps.metadata.outputs.version_tag }}' `
+                    -OutputPath 'artifacts/coverage/summary.json'
+
+            - name: Download prior coverage history
+              shell: bash
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  set -euo pipefail
+                  mkdir -p artifacts/coverage
+                  if gh api repos/${{ github.repository }}/contents/pages/${{ steps.metadata.outputs.branch }}/coverage-history.json --method GET --field ref=gh-pages --jq '.content' > artifacts/coverage/_history.b64 2>/dev/null; then
+                    base64 -d artifacts/coverage/_history.b64 > artifacts/coverage/existing-history.json
+                  fi
+
+            - name: Merge coverage history
+              shell: pwsh
+              run: |
+                  $existing = 'artifacts/coverage/existing-history.json'
+                  if (-not (Test-Path -LiteralPath $existing)) {
+                    $existing = $null
+                  }
+                  scripts/coverage/merge-history.ps1 `
+                    -Branch '${{ steps.metadata.outputs.branch }}' `
+                    -NewRunPath 'artifacts/coverage/summary.json' `
+                    -ExistingHistoryPath $existing `
+                    -OutputPath 'artifacts/coverage/coverage-history.json' `
+                    -MaxEntries 90
+
+            - name: Package Pages bundle
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  tar -czf pages-bundle.tgz docs/_site artifacts/coverage
+
+            - name: Upload Pages bundle
+              uses: actions/upload-artifact@v4
+              with:
+                  name: pages-bundle
+                  path: pages-bundle.tgz
+                  retention-days: 14

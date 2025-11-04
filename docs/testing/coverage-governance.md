@@ -34,6 +34,12 @@ The `scripts/coverage/verify-thresholds.ps1` script compares current coverage JS
 - History is trimmed to the latest 90 days to control storage.
 - Dashboards render trend charts from the JSON to visualize progress.
 
+## Environment Workflows
+
+- [`ci-environments.yml`](../../.github/workflows/ci-environments.yml) runs on pushes to `development`, `staging`, and `production`. It builds the solution, executes the hermetic test suite with coverage, generates DocFX output, merges coverage history, and uploads a `pages-bundle.tgz` artifact containing docs and coverage assets.
+- [`deploy-pages.yml`](../../.github/workflows/deploy-pages.yml) reacts to successful environment runs via the `workflow_run` trigger. It unpacks the bundle, stages artifacts under `pages/<branch>/<VERSION_PREFIX>.<run_number>/`, emits `coverage-history.json` and `badge-status.json`, and deploys to GitHub Pages using `actions/configure-pages` plus `actions/deploy-pages`.
+- Both workflows serialize per branch using concurrency groups (`coverage-${{ github.ref }}` and `pages-${{ github.event.workflow_run.head_branch }}` respectively) to prevent conflicting writes.
+
 ## Exemptions
 
 - Submit exemption requests via issue template `coverage-regression-exemption.md` (TBD).
