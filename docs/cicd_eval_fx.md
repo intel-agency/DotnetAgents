@@ -97,3 +97,12 @@
 - Evidently blog: CI/CD for LLM apps with GitHub Actions (June 2025).  
 - DeepEval GitHub repository (Confident AI).  
 - Braintrust AI evals in CI/CD article (Oct 2025) and Braintrust Eval Action README.
+
+
+
+###
+New Frameworks
+
+* https://llmdocs.deepchecks.com/docs/ci-cd
+* https://www.telusdigital.com/insights/data-and-ai/article/continuous-evaluation-of-generative-ai-using-ci-cd-pipelines
+* https://learn.microsoft.com/en-us/azure/ai-foundry/how-to/evaluation-github-action?tabs=foundry-project
