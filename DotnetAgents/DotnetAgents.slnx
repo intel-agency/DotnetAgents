@@ -7,6 +7,7 @@
   <Project Path="DotnetAgents.AgentApi/DotnetAgents.AgentApi.csproj" />
   <Project Path="DotnetAgents.ApiService/DotnetAgents.ApiService.csproj" />
   <Project Path="DotnetAgents.AppHost/DotnetAgents.AppHost.csproj" />
+  <Project Path="DotnetAgents.Console.Tests/DotnetAgents.Console.Tests.csproj" />
   <Project Path="DotnetAgents.Console/DotnetAgents.Console.csproj" />
   <Project Path="DotnetAgents.ServiceDefaults/DotnetAgents.ServiceDefaults.csproj" />
   <Project Path="DotnetAgents.Tests/DotnetAgents.Tests.csproj" />

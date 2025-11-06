@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Headless.NUnit;
 using Avalonia.Input;
+using Avalonia.VisualTree;
 
 namespace DotnetAgents.Console.Tests;
 
