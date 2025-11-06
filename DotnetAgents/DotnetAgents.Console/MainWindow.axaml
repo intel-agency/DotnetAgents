@@ -6,12 +6,57 @@
         xmlns:local="clr-namespace:DotnetAgents.Console"
         x:Class="DotnetAgents.Console.MainWindow"
         RequestedThemeVariant="Dark"
-        Title="Consolonia">
-    <StackPanel
-        VerticalAlignment="Center"
-        HorizontalAlignment="Center">
-        <TextBlock Text="Welcome to Consolonia!" />
-        <Button Content="_Exit"
-                Click="OnExit" />
-    </StackPanel>
+        Title="Agent Chat">
+    <DockPanel LastChildFill="True">
+        <!-- Header docked at top -->
+        <Border Name="HeaderBorder"
+                DockPanel.Dock="Top" 
+                BorderThickness="1" 
+                BorderBrush="Cyan"
+                Padding="1"
+                Margin="1">
+            <TextBlock Text="AGENT CHAT - Ready"
+                       TextAlignment="Center"
+                       FontWeight="Bold"/>
+        </Border>
+
+        <!-- Buttons docked at bottom -->
+        <StackPanel DockPanel.Dock="Bottom" 
+                    Orientation="Horizontal"
+                    Margin="1">
+            <Button Content="[S]end"
+                    Click="OnSend"
+                    MinWidth="12"
+                    Margin="0,0,1,0" />
+            <Button Content="[E]xit"
+                    Click="OnExit"
+                    MinWidth="12" />
+        </StackPanel>
+
+        <!-- Input docked at bottom (above buttons) -->
+        <Border DockPanel.Dock="Bottom"
+                BorderThickness="1"
+                BorderBrush="Gray"
+                Margin="1,1,1,0">
+            <TextBox Name="inputTextBox" 
+                     AcceptsReturn="False" 
+                     TextWrapping="NoWrap"
+                     Watermark="Type your message..."/>
+        </Border>
+
+        <!-- Chat display fills remaining space -->
+        <Border BorderThickness="1" 
+                BorderBrush="Gray"
+                Margin="1"
+                ClipToBounds="True">
+            <ScrollViewer Name="chatScrollViewer"
+                         VerticalScrollBarVisibility="Auto"
+                         HorizontalScrollBarVisibility="Disabled">
+                <TextBlock Name="agentTextBox" 
+                           TextWrapping="Wrap"
+                           Padding="1"
+                           Text="Ready. Type a message below and press Enter or click Send."/>
+            </ScrollViewer>
+        </Border>
+    </DockPanel>
 </Window>
