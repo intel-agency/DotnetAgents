@@ -1,5 +1,4 @@
 using Avalonia.Controls;
-using Avalonia.Headless.NUnit;
 using Avalonia.Input;
 using Avalonia.VisualTree;
 
@@ -8,7 +7,7 @@ namespace DotnetAgents.Console.Tests;
 [TestFixture]
 public class MainWindowTests
 {
-    [AvaloniaTest]
+    [Test]
     public void MainWindow_Initializes_Successfully()
     {
         // Arrange & Act
@@ -19,7 +18,7 @@ public class MainWindowTests
         Assert.That(window.Title, Is.EqualTo("Agent Chat"));
     }
 
-    [AvaloniaTest]
+    [Test]
     public void MainWindow_Has_Required_Controls()
     {
         // Arrange
@@ -38,7 +37,7 @@ public class MainWindowTests
         Assert.That(headerBorder, Is.Not.Null, "Header Border should exist");
     }
 
-    [AvaloniaTest]
+    [Test]
     public void MainWindow_InputTextBox_Accepts_Text()
     {
         // Arrange
@@ -52,7 +51,7 @@ public class MainWindowTests
         Assert.That(inputTextBox.Text, Is.EqualTo("Test message"));
     }
 
-    [AvaloniaTest]
+    [Test]
     public void MainWindow_Header_Shows_Initial_Status()
     {
         // Arrange & Act
@@ -64,7 +63,7 @@ public class MainWindowTests
         Assert.That(headerText, Does.Contain("AGENT CHAT"));
     }
 
-    [AvaloniaTest]
+    [Test]
     public void MainWindow_ChatDisplay_Shows_Initial_Message()
     {
         // Arrange & Act
@@ -76,7 +75,7 @@ public class MainWindowTests
         Assert.That(agentTextBox?.Text, Is.Not.Empty);
     }
 
-    [AvaloniaTest]
+    [Test]
     public void MainWindow_Send_Button_Exists()
     {
         // Arrange
@@ -90,7 +89,7 @@ public class MainWindowTests
         Assert.That(sendButton, Is.Not.Null, "Send button should exist");
     }
 
-    [AvaloniaTest]
+    [Test]
     public void MainWindow_Exit_Button_Exists()
     {
         // Arrange
@@ -104,7 +103,7 @@ public class MainWindowTests
         Assert.That(exitButton, Is.Not.Null, "Exit button should exist");
     }
 
-    [AvaloniaTest]
+    [Test]
     public void MainWindow_InputTextBox_Clears_After_Enter_Key()
     {
         // Arrange

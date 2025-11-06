@@ -1,55 +1,56 @@
-using DotnetAgents.AgentApi.Controllers;
-using DotnetAgents.AgentApi.Services;
-using IntelAgent;
+using DotnetAgents.Core.Interfaces;
+using DotnetAgents.Core.Models;
+using DotnetAgents.Core; // For Status enum
+using Microsoft.EntityFrameworkCore;
+using System; // For Guid
+using System.Diagnostics; // For Activity
+using System.Collections.Generic; // For List
+using System.Linq; // For OrderByDescending
 using Microsoft.Extensions.Logging;
-using System.Diagnostics;
+using DotnetAgents.AgentApi.Tools;
+using DotnetAgents.AgentApi.Data;
+using DotnetAgents.AgentApi.Services;
+using Microsoft.Extensions.DependencyInjection; // For ILogger
 
+
+// --- NOTE ---
+// The supporting classes from Chapter 2 (IOpenAiClient, OpenAiClient)
+// should be moved to their own files in the IntelAgent project.
+// For now, this assumes they are accessible.
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add service defaults & Aspire client integrations.
-builder.AddServiceDefaults();
+// 1. Add Aspire service defaults and discover Redis/Postgres
+builder.AddServiceDefaults(); // This automatically adds .MapDefaultEndpoints()
+builder.AddRedisDistributedCache("cache"); // For Chapter 5
+builder.Services.AddDbContext<AgentDbContext>("agentdb"); // From Chapter 4
 
-// Add services to the container.
-builder.Services.AddProblemDetails();
-
-// IConfigurationRoot config = new ConfigurationBuilder()
-//     .AddUserSecrets<Program>()
-//     .Build();
-// string? model = config["ModelName"];
-// string? key = config["OpenAIKey"];
-
-
-// builder.Services.AddSingleton<IAgent>(sp =>
-// {
-//     if (string.IsNullOrEmpty(key))
-//     {
-//         throw new InvalidOperationException("OpenAI API key is not configured. Please set the 'OpenAIKey' in user secrets.");
-//     }
-
-//     if (string.IsNullOrEmpty(model))
-//     {
-//         throw new InvalidOperationException("Model name is not configured. Please set the 'ModelName' in user secrets.");
-//     }
-
-//     return new Agent(key, model);
-// });
-
-// builder.Services.AddSingleton<IAgentService, AgentService>(sp =>
-// {
-//     var agent = sp.GetRequiredService<IAgent>();
-//     return new AgentService(agent);
-// });
-
-builder.Services.AddSingleton<IAgentService, AgentService>();
-builder.Services.AddSingleton<IAgentController, AgentController>();
-builder.Services.AddControllers();
-
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// 2. Register Agent Core Logic (Chapter 1 & 2)
+builder.Services.AddScoped<IIntelAgent, Agent>();
+builder.Services.AddSingleton<IOpenAiClient, OpenAiClient>(); // Mock for now
+
+// 3. Register State Manager (Chapter 5)
+builder.Services.AddSingleton<IAgentStateManager, RedisAgentStateManager>();
+
+// 4. Register Tools (Chapter 3)
+builder.Services.AddSingleton<ITool, FileSystemTool>();
+builder.Services.AddSingleton<ITool, ShellCommandTool>();
+builder.Services.AddSingleton<ITool, WebSearchTool>();
+
+// 5. Register Tool Dispatcher (Chapter 3)
+builder.Services.AddSingleton<ToolDispatcher>();
+
+// 6. Register Permission Service (Chapter 7)
+builder.Services.AddSingleton<PermissionService>();
+
+// 7. Register Background Worker (Chapter 4)
+builder.Services.AddHostedService<AgentWorkerService>();
+
+// 8. Register HttpClient for WebSearchTool (Chapter 3)
+builder.Services.AddHttpClient("GoogleSearch");
 
 var app = builder.Build();
 
@@ -62,19 +63,47 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapControllers();
+// 9. Map API Endpoints (Chapter 4)
+app.MapPost("/api/tasks", async (string goal, AgentDbContext db) =>
+{
+    var task = new AgentTask
+    {
+        Id = Guid.NewGuid(),
+        Goal = goal,
+        Status = Status.Queued, // Using our strongly-typed enum
+        CreatedByUserId = "test-user" // TODO: Get from HttpContext.User
+    };
+    db.AgentTasks.Add(task);
+    await db.SaveChangesAsync();
+
+    // Return a 202 Accepted with a URL to check status
+    return Results.Accepted($"/api/tasks/{task.Id}", task);
+})
+.WithName("CreateAgentTask");
+
+app.MapGet("/api/tasks/{id}", async (Guid id, AgentDbContext db) =>
+{
+    var task = await db.AgentTasks.FindAsync(id);
+    return task == null ? Results.NotFound() : Results.Ok(task);
+})
+.WithName("GetAgentTaskStatus");
+
+
+// ---
+// 10. MERGED TELEMETRY ENDPOINTS (From your original file)
+// ---
 
 // Telemetry endpoint for tracking events
 app.MapPost("/api/telemetry", (TelemetryEvent telemetryEvent, ILogger<Program> logger) =>
 {
-    logger.LogInformation("Telemetry event received: {EventName} at {Timestamp}", 
+    logger.LogInformation("Telemetry event received: {EventName} at {Timestamp}",
         telemetryEvent.EventName, telemetryEvent.Timestamp);
-    
+
     if (telemetryEvent.Payload != null)
     {
         logger.LogInformation("Payload: {Payload}", telemetryEvent.Payload);
     }
-    
+
     return Results.Ok();
 })
 .WithName("TrackTelemetry");
@@ -85,7 +114,7 @@ app.MapGet("/api/logs", (ILoggerFactory loggerFactory) =>
     // In a real scenario, you'd query from a logging sink or OpenTelemetry collector
     // For now, we'll return sample data based on Activity context
     var logs = new List<LogEntryDto>();
-    
+
     // Add some sample logs from current activity
     var activity = Activity.Current;
     if (activity != null)
@@ -97,7 +126,7 @@ app.MapGet("/api/logs", (ILoggerFactory loggerFactory) =>
             activity.Source.Name
         ));
     }
-    
+
     // Add more sample logs (in production, fetch from actual log store)
     logs.AddRange(new[]
     {
@@ -106,7 +135,7 @@ app.MapGet("/api/logs", (ILoggerFactory loggerFactory) =>
         new LogEntryDto(DateTimeOffset.UtcNow.AddMinutes(-3), "Warning", "High memory usage detected", "System"),
         new LogEntryDto(DateTimeOffset.UtcNow.AddMinutes(-1), "Info", "Request completed successfully", "AgentApi")
     });
-    
+
     return Results.Ok(logs.OrderByDescending(l => l.Timestamp).ToList());
 })
 .WithName("GetLogs");
@@ -124,15 +153,20 @@ app.MapGet("/api/analytics", () =>
         DebugCount = 43,
         LastUpdated = DateTimeOffset.UtcNow
     };
-    
+
     return Results.Ok(analytics);
 })
 .WithName("GetAnalytics");
 
-app.MapDefaultEndpoints();
+// Note: builder.AddServiceDefaults() already calls .MapDefaultEndpoints()
+// so we don't need to call it again.
 
 app.Run();
 
+
+// ---
+// 11. MERGED RECORD DEFINITIONS (From your original file)
+// ---
 record TelemetryEvent(string EventName, object? Payload, DateTimeOffset Timestamp);
 
 record LogEntryDto(DateTimeOffset Timestamp, string Level, string Message, string Source);
@@ -146,4 +180,3 @@ record LogAnalyticsDto
     public int DebugCount { get; init; }
     public DateTimeOffset LastUpdated { get; init; }
 }
-

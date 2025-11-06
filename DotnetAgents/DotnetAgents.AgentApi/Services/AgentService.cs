@@ -1,8 +1,8 @@
 namespace DotnetAgents.AgentApi.Services;
 
+using DotnetAgents.AgentApi.Model;
 
 using IntelAgent;
-using IntelAgent.Model;
 
 public class AgentService : IAgentService
 {

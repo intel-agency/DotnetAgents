@@ -7,16 +7,18 @@
   </PropertyGroup>
 
  <ItemGroup>
+    <ProjectReference Include="..\DotnetAgents.Core\DotnetAgents.Core.csproj" />
     <ProjectReference Include="..\DotnetAgents.ServiceDefaults\DotnetAgents.ServiceDefaults.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.10" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.6" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\IntelAgent\IntelAgent.csproj" />
+    <Folder Include="Controllers\" />
   </ItemGroup>
 
 </Project>

@@ -9,6 +9,7 @@
   <Project Path="DotnetAgents.AppHost/DotnetAgents.AppHost.csproj" />
   <Project Path="DotnetAgents.Console.Tests/DotnetAgents.Console.Tests.csproj" />
   <Project Path="DotnetAgents.Console/DotnetAgents.Console.csproj" />
+  <Project Path="DotnetAgents.Core/DotnetAgents.Core.csproj" Id="28c245fb-3893-4b52-ba80-ee2358acc6e6" />
   <Project Path="DotnetAgents.ServiceDefaults/DotnetAgents.ServiceDefaults.csproj" />
   <Project Path="DotnetAgents.Tests/DotnetAgents.Tests.csproj" />
   <Project Path="DotnetAgents.Web/DotnetAgents.Web.csproj" />
