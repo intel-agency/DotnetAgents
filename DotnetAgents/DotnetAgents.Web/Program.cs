@@ -23,6 +23,14 @@ builder.Services.AddHttpClient<AgentApiClient>(client =>
 // Register the agent client service
 builder.Services.AddScoped<IAgentClientService, AgentClientService>();
 
+// Register the telemetry service with HTTP client
+builder.Services.AddHttpClient<ITelemetryService, TelemetryService>(client =>
+{
+    // This URL uses "https+http://" to indicate HTTPS is preferred over HTTP.
+    // Learn more about service discovery scheme resolution at https://aka.ms/dotnet/sdschemes.
+    client.BaseAddress = new("https+http://agentapi");
+});
+
 
 
 var app = builder.Build();

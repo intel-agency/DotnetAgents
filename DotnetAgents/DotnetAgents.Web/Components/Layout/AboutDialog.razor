@@ -1,0 +1,63 @@
+@if (IsVisible)
+{
+    <div class="modal-backdrop show" @onclick="Close"></div>
+    <div class="modal show d-block" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">About DotnetAgents</h5>
+                    <button type="button" class="btn-close" @onclick="Close" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-3">
+                        <h4>DotnetAgents</h4>
+                        <p class="text-muted">Version 1.0.0</p>
+                    </div>
+                    <hr />
+                    <p>
+                        <strong>DotnetAgents</strong> is an intelligent agent system built with .NET and ASP.NET Core.
+                    </p>
+                    <p>
+                        This application provides:
+                    </p>
+                    <ul>
+                        <li>Interactive AI Chat Interface</li>
+                        <li>Real-time Telemetry and Logging</li>
+                        <li>Log Analytics and Visualization</li>
+                        <li>OpenTelemetry Integration</li>
+                    </ul>
+                    <hr />
+                    <div class="text-center">
+                        <p class="mb-1">
+                            <strong>Resources:</strong>
+                        </p>
+                        <a href="https://learn.microsoft.com/aspnet/core/" target="_blank" class="btn btn-link btn-sm">
+                            ASP.NET Core Documentation
+                        </a>
+                        <a href="https://learn.microsoft.com/dotnet/" target="_blank" class="btn btn-link btn-sm">
+                            .NET Documentation
+                        </a>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="Close">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> IsVisibleChanged { get; set; }
+
+    private async Task Close()
+    {
+        IsVisible = false;
+        await IsVisibleChanged.InvokeAsync(IsVisible);
+    }
+}
+

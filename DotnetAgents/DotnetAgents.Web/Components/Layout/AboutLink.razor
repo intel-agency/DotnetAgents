@@ -1,0 +1,15 @@
+@rendermode InteractiveServer
+
+<a href="#" @onclick="OpenAboutDialog" @onclick:preventDefault>About</a>
+
+<AboutDialog @bind-IsVisible="showAboutDialog" />
+
+@code {
+    private bool showAboutDialog;
+
+    private void OpenAboutDialog()
+    {
+        showAboutDialog = true;
+    }
+}
+
