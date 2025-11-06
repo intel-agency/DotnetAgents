@@ -15,7 +15,7 @@ public class Agent : IAgent
         _chatClient = CreateChatClient(key, model, endpoint);
     }
 
-    private IChatClient CreateChatClient(string key, string model, string? endpoint)
+    private static IChatClient CreateChatClient(string key, string model, string? endpoint)
     {
         var clientOptions = new OpenAIClientOptions
         {
@@ -38,8 +38,21 @@ public class Agent : IAgent
         var model = Environment.GetEnvironmentVariable("OPENAI_MODEL_NAME");
         var endpoint = Environment.GetEnvironmentVariable("OPENAI_ENDPOINT");
 
-       _chatClient = CreateChatClient(key, model, endpoint);
-    }
+        if (String.IsNullOrWhiteSpace(key))
+        {
+            throw new InvalidOperationException("OPENAI_API_KEY environment variable is not set.");
+        }
+        if (String.IsNullOrWhiteSpace(model))
+        {
+            throw new InvalidOperationException("OPENAI_MODEL_NAME environment variable is not set.");
+        }
+        if (String.IsNullOrWhiteSpace(endpoint))
+        {
+            // empty endpoint is allowed
+        }
+
+        _chatClient = CreateChatClient(key, model, endpoint);
+    }   
 
     public async Task<string> PromptAgentAsync(AgentResponseRequest request)
     {
