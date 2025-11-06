@@ -1,0 +1,109 @@
+@page "/logs"
+@using DotnetAgents.Web.Services
+@inject ITelemetryService TelemetryService
+@implements IDisposable
+
+<PageTitle>Logs</PageTitle>
+
+<h1>Agent Logs</h1>
+
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="RefreshLogs" disabled="@isLoading">
+        @if (isLoading)
+        {
+            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+        }
+        Refresh
+    </button>
+    <span class="ms-3 text-muted">Last updated: @lastUpdated.ToString("HH:mm:ss")</span>
+</div>
+
+@if (isLoading && logs == null)
+{
+    <div class="text-center p-5">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-3">Loading logs...</p>
+    </div>
+}
+else if (logs == null || !logs.Any())
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>
+        No logs available.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th style="width: 180px;">Timestamp</th>
+                    <th style="width: 100px;">Level</th>
+                    <th>Message</th>
+                    <th style="width: 150px;">Source</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var log in logs)
+                {
+                    <tr>
+                        <td><small>@log.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</small></td>
+                        <td><span class="badge bg-@GetLogLevelColor(log.Level)">@log.Level</span></td>
+                        <td>@log.Message</td>
+                        <td><small class="text-muted">@log.Source</small></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<LogEntryDto>? logs;
+    private bool isLoading;
+    private DateTime lastUpdated = DateTime.Now;
+    private System.Threading.Timer? refreshTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshLogs();
+        
+        // Auto-refresh every 30 seconds
+        refreshTimer = new System.Threading.Timer(async _ => await InvokeAsync(async () =>
+        {
+            await RefreshLogs();
+            StateHasChanged();
+        }), null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+    }
+
+    private async Task RefreshLogs()
+    {
+        isLoading = true;
+        try
+        {
+            logs = await TelemetryService.GetLogsAsync();
+            lastUpdated = DateTime.Now;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string GetLogLevelColor(string level) => level?.ToLower() switch
+    {
+        "error" => "danger",
+        "warning" => "warning",
+        "info" => "info",
+        "debug" => "secondary",
+        _ => "primary"
+    };
+
+    public void Dispose()
+    {
+        refreshTimer?.Dispose();
+    }
+}

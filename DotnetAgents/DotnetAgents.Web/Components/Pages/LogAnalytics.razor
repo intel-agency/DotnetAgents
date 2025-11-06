@@ -1,0 +1,170 @@
+@page "/log-analytics"
+@using DotnetAgents.Web.Services
+@inject ITelemetryService TelemetryService
+@implements IDisposable
+
+<PageTitle>Log Analytics</PageTitle>
+
+<h1>Log Analytics</h1>
+
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="RefreshAnalytics" disabled="@isLoading">
+        @if (isLoading)
+        {
+            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+        }
+        Refresh
+    </button>
+    <span class="ms-3 text-muted">Last updated: @lastUpdated.ToString("HH:mm:ss")</span>
+</div>
+
+@if (isLoading && analytics == null)
+{
+    <div class="text-center p-5">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-3">Loading analytics...</p>
+    </div>
+}
+else if (analytics != null)
+{
+    <div class="row g-4">
+        <div class="col-md-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">Total Logs</h5>
+                    <p class="display-4 fw-bold">@analytics.TotalLogs</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center h-100 border-danger">
+                <div class="card-body">
+                    <h5 class="card-title text-danger">Errors</h5>
+                    <p class="display-4 fw-bold text-danger">@analytics.ErrorCount</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center h-100 border-warning">
+                <div class="card-body">
+                    <h5 class="card-title text-warning">Warnings</h5>
+                    <p class="display-4 fw-bold text-warning">@analytics.WarningCount</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center h-100 border-info">
+                <div class="card-body">
+                    <h5 class="card-title text-info">Info</h5>
+                    <p class="display-4 fw-bold text-info">@analytics.InfoCount</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-5">
+        <div class="card">
+            <div class="card-body">
+                <h3 class="card-title">Log Level Distribution</h3>
+                <div class="row mt-4">
+                    <div class="col-md-8">
+                        <div class="progress" style="height: 30px;">
+                            <div class="progress-bar bg-danger" 
+                                 style="width: @GetPercentage(analytics.ErrorCount, analytics.TotalLogs)%"
+                                 title="Errors: @analytics.ErrorCount">
+                                @if (analytics.ErrorCount > 0)
+                                {
+                                    <span>@analytics.ErrorCount</span>
+                                }
+                            </div>
+                            <div class="progress-bar bg-warning" 
+                                 style="width: @GetPercentage(analytics.WarningCount, analytics.TotalLogs)%"
+                                 title="Warnings: @analytics.WarningCount">
+                                @if (analytics.WarningCount > 0)
+                                {
+                                    <span>@analytics.WarningCount</span>
+                                }
+                            </div>
+                            <div class="progress-bar bg-info" 
+                                 style="width: @GetPercentage(analytics.InfoCount, analytics.TotalLogs)%"
+                                 title="Info: @analytics.InfoCount">
+                                @if (analytics.InfoCount > 0)
+                                {
+                                    <span>@analytics.InfoCount</span>
+                                }
+                            </div>
+                            <div class="progress-bar bg-secondary" 
+                                 style="width: @GetPercentage(analytics.DebugCount, analytics.TotalLogs)%"
+                                 title="Debug: @analytics.DebugCount">
+                                @if (analytics.DebugCount > 0)
+                                {
+                                    <span>@analytics.DebugCount</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <ul class="list-unstyled">
+                            <li><span class="badge bg-danger me-2"></span> Error: @GetPercentage(analytics.ErrorCount, analytics.TotalLogs).ToString("F1")%</li>
+                            <li><span class="badge bg-warning me-2"></span> Warning: @GetPercentage(analytics.WarningCount, analytics.TotalLogs).ToString("F1")%</li>
+                            <li><span class="badge bg-info me-2"></span> Info: @GetPercentage(analytics.InfoCount, analytics.TotalLogs).ToString("F1")%</li>
+                            <li><span class="badge bg-secondary me-2"></span> Debug: @GetPercentage(analytics.DebugCount, analytics.TotalLogs).ToString("F1")%</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <div class="alert alert-secondary">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>OpenTelemetry Enabled:</strong> This data is collected from the Aspire OpenTelemetry integration.
+        </div>
+    </div>
+}
+
+@code {
+    private LogAnalyticsDto? analytics;
+    private bool isLoading;
+    private DateTime lastUpdated = DateTime.Now;
+    private System.Threading.Timer? refreshTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshAnalytics();
+        
+        // Auto-refresh every 30 seconds
+        refreshTimer = new System.Threading.Timer(async _ => await InvokeAsync(async () =>
+        {
+            await RefreshAnalytics();
+            StateHasChanged();
+        }), null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+    }
+
+    private async Task RefreshAnalytics()
+    {
+        isLoading = true;
+        try
+        {
+            analytics = await TelemetryService.GetAnalyticsAsync();
+            lastUpdated = DateTime.Now;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private double GetPercentage(int count, int total)
+    {
+        return total > 0 ? (count * 100.0 / total) : 0;
+    }
+
+    public void Dispose()
+    {
+        refreshTimer?.Dispose();
+    }
+}
