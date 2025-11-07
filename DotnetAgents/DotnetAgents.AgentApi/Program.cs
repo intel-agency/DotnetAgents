@@ -3,13 +3,11 @@ using DotnetAgents.Core.Models;
 using DotnetAgents.Core; // For Status enum
 using Microsoft.EntityFrameworkCore;
 using System; // For Guid
-using System.Diagnostics; // For Activity
-using System.Collections.Generic; // For List
-using System.Linq; // For OrderByDescending
 using Microsoft.Extensions.Logging;
 using DotnetAgents.AgentApi.Tools;
 using DotnetAgents.AgentApi.Data;
 using DotnetAgents.AgentApi.Services;
+using DotnetAgents.AgentApi.Models;
 using Microsoft.Extensions.DependencyInjection;
 using IntelAgent;
 
@@ -41,13 +39,16 @@ builder.Services.AddSingleton<IToolDispatcher, ToolDispatcher>();
 // 6. Register Permission Service (Chapter 7)
 builder.Services.AddSingleton<PermissionService>();
 
-// 7. Register Database Migrator (runs FIRST to ensure schema is ready)
+// 7. Register Telemetry Service
+builder.Services.AddSingleton<TelemetryService>();
+
+// 8. Register Database Migrator (runs FIRST to ensure schema is ready)
 builder.Services.AddHostedService<DatabaseMigratorService>();
 
-// 8. Register Background Worker (runs AFTER migration completes)
+// 9. Register Background Worker (runs AFTER migration completes)
 builder.Services.AddHostedService<AgentWorkerService>();
 
-// 9. Register HttpClient for WebSearchTool (Chapter 3)
+// 10. Register HttpClient for WebSearchTool (Chapter 3)
 builder.Services.AddHttpClient("GoogleSearch");
 
 var app = builder.Build();
@@ -61,7 +62,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// 10. Map API Endpoints (Chapter 4)
+// 11. Map API Endpoints (Chapter 4)
 app.MapPost("/api/tasks", async (string goal, AgentDbContext db) =>
 {
     var task = new AgentTask
@@ -88,70 +89,29 @@ app.MapGet("/api/tasks/{id}", async (Guid id, AgentDbContext db) =>
 
 
 // ---
-// 11. MERGED TELEMETRY ENDPOINTS (From your original file)
+// 12. TELEMETRY ENDPOINTS (Delegating to TelemetryService)
 // ---
 
 // Telemetry endpoint for tracking events
-app.MapPost("/api/telemetry", (TelemetryEvent telemetryEvent, ILogger<Program> logger) =>
+app.MapPost("/api/telemetry", (TelemetryEvent telemetryEvent, TelemetryService telemetryService) =>
 {
-    logger.LogInformation("Telemetry event received: {EventName} at {Timestamp}",
-        telemetryEvent.EventName, telemetryEvent.Timestamp);
-
-    if (telemetryEvent.Payload != null)
-    {
-        logger.LogInformation("Payload: {Payload}", telemetryEvent.Payload);
-    }
-
+    telemetryService.TrackEvent(telemetryEvent);
     return Results.Ok();
 })
 .WithName("TrackTelemetry");
 
 // Logs API endpoint - returns collected log entries
-app.MapGet("/api/logs", (ILoggerFactory loggerFactory) =>
+app.MapGet("/api/logs", (TelemetryService telemetryService) =>
 {
-    // In a real scenario, you'd query from a logging sink or OpenTelemetry collector
-    // For now, we'll return sample data based on Activity context
-    var logs = new List<LogEntryDto>();
-
-    // Add some sample logs from current activity
-    var activity = Activity.Current;
-    if (activity != null)
-    {
-        logs.Add(new LogEntryDto(
-            DateTimeOffset.UtcNow.AddMinutes(-5),
-            "Info",
-            $"Activity started: {activity.DisplayName}",
-            activity.Source.Name
-        ));
-    }
-
-    // Add more sample logs (in production, fetch from actual log store)
-    logs.AddRange(new[]
-    {
-        new LogEntryDto(DateTimeOffset.UtcNow.AddMinutes(-10), "Info", "Application started", "AgentApi"),
-        new LogEntryDto(DateTimeOffset.UtcNow.AddMinutes(-8), "Debug", "Agent client initialized", "IntelAgent"),
-        new LogEntryDto(DateTimeOffset.UtcNow.AddMinutes(-3), "Warning", "High memory usage detected", "System"),
-        new LogEntryDto(DateTimeOffset.UtcNow.AddMinutes(-1), "Info", "Request completed successfully", "AgentApi")
-    });
-
-    return Results.Ok(logs.OrderByDescending(l => l.Timestamp).ToList());
+    var logs = telemetryService.GetLogs();
+    return Results.Ok(logs);
 })
 .WithName("GetLogs");
 
 // Analytics API endpoint - returns aggregated telemetry data
-app.MapGet("/api/analytics", () =>
+app.MapGet("/api/analytics", (TelemetryService telemetryService) =>
 {
-    // In production, aggregate from OpenTelemetry metrics/logs
-    var analytics = new LogAnalyticsDto
-    {
-        TotalLogs = 156,
-        ErrorCount = 3,
-        WarningCount = 12,
-        InfoCount = 98,
-        DebugCount = 43,
-        LastUpdated = DateTimeOffset.UtcNow
-    };
-
+    var analytics = telemetryService.GetAnalytics();
     return Results.Ok(analytics);
 })
 .WithName("GetAnalytics");
@@ -160,21 +120,3 @@ app.MapGet("/api/analytics", () =>
 // so we don't need to call it again.
 
 app.Run();
-
-
-// ---
-// 12. MERGED RECORD DEFINITIONS (From your original file)
-// ---
-record TelemetryEvent(string EventName, object? Payload, DateTimeOffset Timestamp);
-
-record LogEntryDto(DateTimeOffset Timestamp, string Level, string Message, string Source);
-
-record LogAnalyticsDto
-{
-    public int TotalLogs { get; init; }
-    public int ErrorCount { get; init; }
-    public int WarningCount { get; init; }
-    public int InfoCount { get; init; }
-    public int DebugCount { get; init; }
-    public DateTimeOffset LastUpdated { get; init; }
-}
