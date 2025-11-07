@@ -9,12 +9,15 @@
  <ItemGroup>
     <ProjectReference Include="..\DotnetAgents.Core\DotnetAgents.Core.csproj" />
     <ProjectReference Include="..\DotnetAgents.ServiceDefaults\DotnetAgents.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\IntelAgent\IntelAgent.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.10" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.6" />
+	  <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.1.0" />
+	  <PackageReference Include="Aspire.StackExchange.Redis.DistributedCaching" Version="9.2.0" />
   </ItemGroup>
 
   <ItemGroup>

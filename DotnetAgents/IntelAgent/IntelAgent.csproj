@@ -15,7 +15,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DotnetAgents.Core\DotnetAgents.Core.csproj" />
-	<ProjectReference Include="..\DotnetAgents.AgentApi\DotnetAgents.AgentApi.csproj" />
   </ItemGroup>
 
 </Project>

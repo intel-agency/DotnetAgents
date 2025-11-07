@@ -1,7 +1,7 @@
 using Microsoft.Extensions.AI;
 using System.ClientModel;
 using OpenAI;
-using IntelAgent.Model;
+using DotnetAgents.Core.Models;
 
 namespace IntelAgent;
 

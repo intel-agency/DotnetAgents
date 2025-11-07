@@ -58,8 +58,25 @@ namespace DotnetAgents.AgentApi.Services
                             // Resolve the agent *within the scope*
                             var agent = scope.ServiceProvider.GetRequiredService<IIntelAgent>();
 
-                            // Execute the task. The agent itself handles status updates.
-                            await agent.ExecuteTaskAsync(taskToRun, stoppingToken);
+                            try
+                            {
+                                // Execute the task.
+                                await agent.ExecuteTaskAsync(taskToRun, stoppingToken);
+
+                                // If it returns without error, mark as completed
+                                taskToRun.Status = Status.Completed;
+                            }
+                            catch (Exception agentEx)
+                            {
+                                // Agent loop failed, mark as failed
+                                _logger.LogError(agentEx, "Task {TaskId} failed during execution.", taskToRun.Id);
+                                taskToRun.Status = Status.Failed;
+                            }
+                            finally
+                            {
+                                // Save the *final* status to the durable database
+                                await dbContext.SaveChangesAsync(stoppingToken);
+                            }
                         }
                     }
                 }
@@ -72,11 +89,7 @@ namespace DotnetAgents.AgentApi.Services
                         break;
                     }
 
-                    _logger.LogError(ex, "Error executing task {TaskId}", taskToRun?.Id);
-
-                    // If a task was running and failed, mark it as "Failed"
-                    if (taskToRun != null)
-                        await UpdateTaskStatusOnException(taskToRun.Id, ex.Message);
+                    _logger.LogError(ex, "Error executing task {TaskId}", taskToRun?.Id);                  
                 }
 
                 if (taskToRun == null)
@@ -87,22 +100,6 @@ namespace DotnetAgents.AgentApi.Services
             }
 
             _logger.LogInformation("AgentWorkerService stopping.");
-        }
-
-        private async Task UpdateTaskStatusOnException(Guid taskId, string errorMessage)
-        {
-            using (var scope = _serviceProvider.CreateScope())
-            {
-                var dbContext = scope.ServiceProvider.GetRequiredService<AgentDbContext>();
-                var task = await dbContext.AgentTasks.FindAsync(taskId);
-                if (task != null)
-                {
-                    // Use our strongly-typed enum
-                    task.Status = Status.Failed;
-                    // You could add an "Error" column to store the errorMessage
-                    await dbContext.SaveChangesAsync();
-                }
-            }
         }
     }
 }

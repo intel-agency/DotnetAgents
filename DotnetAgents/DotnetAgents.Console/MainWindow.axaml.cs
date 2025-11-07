@@ -4,7 +4,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using IntelAgent;
-using IntelAgent.Model;
+
 
 namespace DotnetAgents.Console
 {

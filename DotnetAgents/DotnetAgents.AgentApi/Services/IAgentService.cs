@@ -1,6 +1,6 @@
 using System;
 
-using DotnetAgents.AgentApi.Model;
+using DotnetAgents.Core.Models;
 
 namespace DotnetAgents.AgentApi.Services;
 

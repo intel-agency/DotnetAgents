@@ -56,7 +56,8 @@ namespace DotnetAgents.AgentApi.Tools
 
             try
             {
-                [cite_start]// This is mock data, as per the guide [cite: 283-284]
+                
+                // This is mock data, as per the guide [cite: 283-284]
                 // You would deserialize the real Google response here.
                 var mockResults = new[]
                 {

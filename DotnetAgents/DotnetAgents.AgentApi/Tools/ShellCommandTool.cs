@@ -1,10 +1,10 @@
 ﻿using DotnetAgents.Core.Interfaces;
-using DotnetAgents.Agent.Services; // For PermissionService (we'll create this)
 using Microsoft.Extensions.Configuration; // For IConfiguration
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Diagnostics; // For Process
 using System.Runtime.InteropServices;
+using DotnetAgents.AgentApi.Services;
 
 namespace DotnetAgents.AgentApi.Tools
 {

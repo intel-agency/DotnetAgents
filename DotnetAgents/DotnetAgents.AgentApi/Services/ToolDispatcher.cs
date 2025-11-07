@@ -12,7 +12,7 @@ namespace DotnetAgents.AgentApi.Services
     /// <summary>
     /// Manages and executes all available agent tools.
     /// </summary>
-    public class ToolDispatcher
+    public class ToolDispatcher : IToolDispatcher
     {
         private readonly ILogger<ToolDispatcher> _logger;
         private readonly Dictionary<string, ITool> _tools;

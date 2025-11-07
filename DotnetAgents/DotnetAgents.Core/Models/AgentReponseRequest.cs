@@ -1,6 +1,6 @@
 using System;
 
-namespace DotnetAgents.AgentApi.Model;
+namespace DotnetAgents.Core.Models;
 
 public record AgentResponseRequest
 {

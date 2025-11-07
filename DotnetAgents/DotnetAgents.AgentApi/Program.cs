@@ -10,7 +10,9 @@ using Microsoft.Extensions.Logging;
 using DotnetAgents.AgentApi.Tools;
 using DotnetAgents.AgentApi.Data;
 using DotnetAgents.AgentApi.Services;
-using Microsoft.Extensions.DependencyInjection; // For ILogger
+using Microsoft.Extensions.DependencyInjection; // For ILoggerAgen
+using IntelAgent;
+using Aspire.Npgsql.EntityFrameworkCore.PostgreSQL;
 
 
 // --- NOTE ---
@@ -23,7 +25,7 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Add Aspire service defaults and discover Redis/Postgres
 builder.AddServiceDefaults(); // This automatically adds .MapDefaultEndpoints()
 builder.AddRedisDistributedCache("cache"); // For Chapter 5
-builder.Services.AddDbContext<AgentDbContext>("agentdb"); // From Chapter 4
+builder.AddNpgsqlDbContext<AgentDbContext>("agentdb"); // From Chapter 4
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -41,7 +43,7 @@ builder.Services.AddSingleton<ITool, ShellCommandTool>();
 builder.Services.AddSingleton<ITool, WebSearchTool>();
 
 // 5. Register Tool Dispatcher (Chapter 3)
-builder.Services.AddSingleton<ToolDispatcher>();
+builder.Services.AddSingleton<IToolDispatcher, ToolDispatcher>();
 
 // 6. Register Permission Service (Chapter 7)
 builder.Services.AddSingleton<PermissionService>();
