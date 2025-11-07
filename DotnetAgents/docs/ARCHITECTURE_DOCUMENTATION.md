@@ -127,6 +127,30 @@ sequenceDiagram
   WebUI-->>User: Present updated state
 ```
 
+#### Component Responsibilities
+
+- **DotnetAgents.AppHost (`DotnetAgents.AppHost/AppHost.cs`)** orchestrates the Aspire application graph. It provisions Redis, PostgreSQL, and pgAdmin containers, injects connection strings into dependent services, and enforces startup ordering so the API cannot begin accepting traffic until the database is healthy.
+- **DotnetAgents.AgentApi (`DotnetAgents.AgentApi/Program.cs`)** exposes minimal API endpoints, configures Entity Framework Core, and registers hosted services. It is also where all tool implementations, Redis state management, and the mock OpenAI client are wired together.
+- **AgentWorkerService (`DotnetAgents.AgentApi/Services/AgentWorkerService.cs`)** runs as a background worker that polls the `AgentTasks` table, marks tasks as `Running`, invokes the agent, and writes the final status back to PostgreSQL.
+- **IntelAgent (`IntelAgent/Agent.cs`)** drives the Think→Act reasoning loop. It restores conversation history from Redis, requests completions from the LLM client, dispatches tool calls, persists intermediate history, and clears state when execution completes.
+- **ToolDispatcher & Tools (`DotnetAgents.AgentApi/Services/ToolDispatcher.cs`, `DotnetAgents.AgentApi/Tools/*.cs`)** encapsulate the concrete actions the agent can perform. The dispatcher loads registered tools at startup, publishes their JSON schemas to the agent, and handles safe execution with logging and error reporting.
+- **Blazor Web UI (`DotnetAgents.Web`)** delivers the operator-facing dashboards. `AgentChat.razor` collects prompts, the Logs and Analytics pages poll telemetry endpoints, and client services abstract HTTP interactions.
+- **DotnetAgents.ServiceDefaults** centralizes Aspire service defaults (logging, health checks, OpenTelemetry) so each executable project stays lean.
+
+#### Execution Pipeline Overview
+
+1. **Task submission** enters through the Web UI or direct API calls. The API persists an `AgentTask` row and returns the identifier for polling.
+2. **Background processing** is performed by `AgentWorkerService`, which creates a scoped `AgentDbContext` and `IIntelAgent` for each task execution to ensure clean dependency resolution and transactional updates.
+3. **Think→Act iterations** occur inside `IntelAgent.ExecuteTaskAsync`. After each tool invocation or reasoning step, conversation history is saved through `RedisAgentStateManager` so recovery from restarts is possible.
+4. **Status finalization** happens when the worker regains control. Successful runs transition the task to `Completed`; unhandled exceptions are logged and mark the task `Failed` while leaving diagnostic data in the database.
+5. **Telemetry hooks** (if `Features:TelemetryEnabled` is true) route events through `TelemetryService`, illustrating how custom metrics can coexist with Aspire’s built-in OpenTelemetry wiring.
+
+#### Observability & Configuration Notes
+
+- **OpenTelemetry:** `DotnetAgents.ServiceDefaults` configures tracing and logging, and the AppHost propagates `OTEL_EXPORTER_OTLP_ENDPOINT` so operators can attach a collector without code changes.
+- **Feature flags:** The API reads `Features:TelemetryEnabled` during startup and only maps telemetry endpoints when the flag is enabled, keeping development environments quiet by default.
+- **Resilience:** Aspire’s `EnrichNpgsqlDbContext` helper sets extended command timeouts and enables retry logic for PostgreSQL, while Redis history uses a sliding expiration to avoid stale conversation transcripts.
+
 ---
 
 ## 📁 Project Structure
@@ -215,6 +239,16 @@ DotnetAgents/
     └── AgentApiClient.cs            # HTTP client for API
 ```
 
+#### Key Projects in Detail
+
+- **DotnetAgents.AppHost** is the Aspire entry point. Running `dotnet run` from this project spins up the entire application graph, injects connection strings, and ensures health checks pass before dependent services start.
+- **DotnetAgents.AgentApi** combines HTTP endpoints with hosted services. `Program.cs` registers migrations, the background worker, tool implementations, and optional telemetry so that orchestration logic lives in one place.
+- **DotnetAgents.Core** captures the shared language of the system (task records, messages, interfaces, and enums). It lets the worker, agent, and UI communicate without tight coupling.
+- **IntelAgent** hosts the Think→Act implementation. Aside from the stubbed `OpenAiClient`, all logic here is production-ready and only needs a concrete LLM adapter to begin issuing calls.
+- **DotnetAgents.Web** delivers the Blazor dashboards. Pages such as `AgentChat.razor`, `Logs.razor`, and `LogAnalytics.razor` demonstrate polling patterns and error handling against the API.
+- **DotnetAgents.ApiService** is intentionally minimal today, giving the team a scaffold for future REST endpoints or integration-specific hosts without bloating the primary API.
+- **Supporting libraries** (e.g., `DotnetAgents.ServiceDefaults`) centralize cross-cutting policies like OpenTelemetry wiring, consistent logging, and health checks, keeping executable projects slim.
+
 ---
 
 ## 🔄 Current Implementation Status
@@ -238,6 +272,8 @@ DotnetAgents/
 | **Log Viewer** | ✅ Complete | `/logs` page |
 | **Analytics Dashboard** | ✅ Complete | `/log-analytics` page |
 
+These entries are fully functional today. For example, a prompt submitted from `AgentChat.razor` is persisted to PostgreSQL, processed by `AgentWorkerService`, and acknowledged back to the user with the queued-message string returned by `PromptAgentResponse`. Telemetry endpoints respond to HTTP requests, and the Blazor dashboards consume their outputs even though the payloads are still synthetic.
+
 ### ⚠️ Partially Implemented
 
 | Feature | Status | Issue |
@@ -246,6 +282,8 @@ DotnetAgents/
 | **Task Result Storage** | 🟡 Missing | `AgentTask` has no `Result` field |
 | **Real-time Updates** | ❌ Not Started | No SignalR implementation |
 | **Telemetry Data Storage** | 🟡 Mock | Returns hardcoded data |
+
+Each yellow-row feature already has supporting code. The agent loop exposes tool schemas and persists Redis history, so pointing `OpenAiClient` at a real provider is the only missing piece for live completions. Similarly, adding the planned columns to `AgentTask` and updating `AgentWorkerService` to save outputs will enable storing and displaying results without touching the execution pipeline.
 
 ### ❌ Not Implemented
 
@@ -259,6 +297,8 @@ DotnetAgents/
 | **Task History** | 🟢 Low | No audit trail |
 | **User Authentication** | 🟡 Medium | Hardcoded "test-user" |
 | **Permission System** | 🟡 Medium | `PermissionService` exists but unused |
+
+Open slots in the roadmap align with existing extension points. SignalR can sit beside the current minimal APIs, a tasks monitoring page can reuse the same `AgentDbContext` queries as the worker, and the dormant `PermissionService` can begin enforcing rules once proper authentication replaces the hardcoded user IDs.
 
 ---
 
@@ -292,6 +332,12 @@ flowchart TD
 7. **State persists between steps.** `RedisAgentStateManager` saves the conversation history after each iteration to support resilience.
 8. **Completion recorded.** After execution, the worker marks the task `Completed`, persists results, and clears transient Redis state.
 9. **User polls for results.** Until SignalR is added, users periodically call `GET /api/tasks/{id}` to read the latest status and (future) result payload.
+
+#### Additional Operational Insights
+
+- **Concurrency model:** The worker handles one task per iteration of its loop, but the architecture supports horizontal scaling by running multiple worker instances under Aspire. Optimistic concurrency in PostgreSQL prevents two workers from picking the same task simultaneously.
+- **Failure handling:** Exceptions thrown by the agent bubble back to `AgentWorkerService`, which logs the error, marks the task `Failed`, and leaves the task record intact for diagnostics. Because Redis conversation history is only cleared after a clean exit, operators can inspect transcripts following a crash.
+- **Tool extensibility:** Tools are registered through dependency injection. Implementing a new `ITool` (for example, a GitHub integration) and registering it with the service collection automatically makes it available to the agent in the next Think→Act iteration.
 
 ### Current Polling Behavior
 
