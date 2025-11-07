@@ -10,10 +10,8 @@ using Microsoft.Extensions.Logging;
 using DotnetAgents.AgentApi.Tools;
 using DotnetAgents.AgentApi.Data;
 using DotnetAgents.AgentApi.Services;
-using Microsoft.Extensions.DependencyInjection; // For ILoggerAgen
+using Microsoft.Extensions.DependencyInjection;
 using IntelAgent;
-using Aspire.Npgsql.EntityFrameworkCore.PostgreSQL;
-
 
 // --- NOTE ---
 // The supporting classes from Chapter 2 (IOpenAiClient, OpenAiClient)
