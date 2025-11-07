@@ -4,6 +4,10 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+  <InvariantGlobalization>true</InvariantGlobalization>
+    <!--<PublishAot>true</PublishAot>-->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
 
  <ItemGroup>
@@ -11,26 +15,17 @@
     <ProjectReference Include="..\DotnetAgents.ServiceDefaults\DotnetAgents.ServiceDefaults.csproj" />
     <ProjectReference Include="..\IntelAgent\IntelAgent.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Aspire.StackExchange.Redis.DistributedCaching" Version="9.5.2" />    	
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.10" />    
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="9.0.10" />    
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.10">
+  
+   <ItemGroup>
+    <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.0" />
+    <PackageReference Include="Aspire.StackExchange.Redis.DistributedCaching" Version="9.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.10" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="9.0.10" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
   </ItemGroup>
 	
-	<ItemGroup>
-		<PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.5.2" />		
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.10">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-	</ItemGroup>
 
 </Project>
