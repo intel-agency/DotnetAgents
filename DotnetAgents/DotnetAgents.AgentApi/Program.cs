@@ -41,21 +41,16 @@ builder.Services.AddSingleton<IToolDispatcher, ToolDispatcher>();
 // 6. Register Permission Service (Chapter 7)
 builder.Services.AddSingleton<PermissionService>();
 
-// 7. Register Background Worker (Chapter 4)
+// 7. Register Database Migrator (runs FIRST to ensure schema is ready)
+builder.Services.AddHostedService<DatabaseMigratorService>();
+
+// 8. Register Background Worker (runs AFTER migration completes)
 builder.Services.AddHostedService<AgentWorkerService>();
 
-// 8. Register HttpClient for WebSearchTool (Chapter 3)
+// 9. Register HttpClient for WebSearchTool (Chapter 3)
 builder.Services.AddHttpClient("GoogleSearch");
 
 var app = builder.Build();
-
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<AgentDbContext>();
-
-    // This will find and apply any pending migrations
-    await dbContext.Database.MigrateAsync();
-}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -66,7 +61,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// 9. Map API Endpoints (Chapter 4)
+// 10. Map API Endpoints (Chapter 4)
 app.MapPost("/api/tasks", async (string goal, AgentDbContext db) =>
 {
     var task = new AgentTask
@@ -93,7 +88,7 @@ app.MapGet("/api/tasks/{id}", async (Guid id, AgentDbContext db) =>
 
 
 // ---
-// 10. MERGED TELEMETRY ENDPOINTS (From your original file)
+// 11. MERGED TELEMETRY ENDPOINTS (From your original file)
 // ---
 
 // Telemetry endpoint for tracking events
@@ -168,7 +163,7 @@ app.Run();
 
 
 // ---
-// 11. MERGED RECORD DEFINITIONS (From your original file)
+// 12. MERGED RECORD DEFINITIONS (From your original file)
 // ---
 record TelemetryEvent(string EventName, object? Payload, DateTimeOffset Timestamp);
 
