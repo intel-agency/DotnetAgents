@@ -15,6 +15,8 @@ namespace IntelAgent
     /// </summary>
     public class Agent : IIntelAgent
     {
+        private const int MAX_ITERATIONS = 10;
+
         private readonly ILogger<Agent> _logger;
         private readonly IOpenAiClient _llmClient;
         private readonly IToolDispatcher _toolDispatcher;
@@ -52,7 +54,7 @@ namespace IntelAgent
 
             try
             {
-                for (int i = 0; i < 10; i++) // Max 10 iterations
+                for (int i = 0; i < MAX_ITERATIONS; i++) // Max 10 iterations
                 {
                     if (cancellationToken.IsCancellationRequested)
                     {
