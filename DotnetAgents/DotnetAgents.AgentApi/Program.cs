@@ -13,11 +13,6 @@ using DotnetAgents.AgentApi.Services;
 using Microsoft.Extensions.DependencyInjection;
 using IntelAgent;
 
-// --- NOTE ---
-// The supporting classes from Chapter 2 (IOpenAiClient, OpenAiClient)
-// should be moved to their own files in the IntelAgent project.
-// For now, this assumes they are accessible.
-
 var builder = WebApplication.CreateBuilder(args);
 
 // 1. Add Aspire service defaults and discover Redis/Postgres
@@ -53,6 +48,14 @@ builder.Services.AddHostedService<AgentWorkerService>();
 builder.Services.AddHttpClient("GoogleSearch");
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AgentDbContext>();
+
+    // This will find and apply any pending migrations
+    await dbContext.Database.MigrateAsync();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
