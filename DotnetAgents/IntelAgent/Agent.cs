@@ -38,15 +38,15 @@ public class Agent : IAgent
         var model = Environment.GetEnvironmentVariable("OPENAI_MODEL_NAME");
         var endpoint = Environment.GetEnvironmentVariable("OPENAI_ENDPOINT");
 
-        if (String.IsNullOrWhiteSpace(key))
+        if (string.IsNullOrWhiteSpace(key))
         {
             throw new InvalidOperationException("OPENAI_API_KEY environment variable is not set.");
         }
-        if (String.IsNullOrWhiteSpace(model))
+        if (string.IsNullOrWhiteSpace(model))
         {
             throw new InvalidOperationException("OPENAI_MODEL_NAME environment variable is not set.");
         }
-        if (String.IsNullOrWhiteSpace(endpoint))
+        if (string.IsNullOrWhiteSpace(endpoint))
         {
             // empty endpoint is allowed
         }
