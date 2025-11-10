@@ -3,10 +3,16 @@
     <Platform Name="Any CPU" />
     <Platform Name="x64" />
     <Platform Name="x86" />
-  </Configurations>                 
+  </Configurations>
   <Project Path="DotnetAgents.AgentApi/DotnetAgents.AgentApi.csproj" />
   <Project Path="DotnetAgents.ApiService/DotnetAgents.ApiService.csproj" />
   <Project Path="DotnetAgents.AppHost/DotnetAgents.AppHost.csproj" />
+  <Project Path="DotnetAgents.Console.Tests\DotnetAgents.Console.Tests.csproj" Type="Classic C#">
+    <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
+    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
+    <Configuration Solution="Release|x64" Project="Release|Any CPU" />
+    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
+  </Project>
   <Project Path="DotnetAgents.Console/DotnetAgents.Console.csproj" />
   <Project Path="DotnetAgents.ServiceDefaults/DotnetAgents.ServiceDefaults.csproj" />
   <Project Path="DotnetAgents.Tests/DotnetAgents.Tests.csproj" />
