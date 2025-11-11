@@ -25,6 +25,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\DotnetAgents.Console\DotnetAgents.Console.csproj" />
         <ProjectReference Include="..\IntelAgent\IntelAgent.csproj" />
     </ItemGroup>
 

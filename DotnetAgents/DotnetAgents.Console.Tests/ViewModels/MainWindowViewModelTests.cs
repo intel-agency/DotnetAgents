@@ -1,7 +1,9 @@
 using DotnetAgents.Console.Services;
 using DotnetAgents.Console.ViewModels;
+
 using IntelAgent;
-using IntelAgent.Model;
+using DotnetAgents.Core.Models;
+
 using Moq;
 
 namespace DotnetAgents.Console.Tests.ViewModels;
@@ -128,7 +130,7 @@ public class MainWindowViewModelTests
 
         // Assert
         _mockAgent.Verify(a => a.PromptAgentAsync(
-            It.Is<AgentResponseRequest>(r => r.Prompt == "Test prompt")), 
+            It.Is<AgentResponseRequest>(r => r.Prompt == "Test prompt")),
             Times.Once);
     }
 
@@ -154,7 +156,7 @@ public class MainWindowViewModelTests
         // Arrange
         _viewModel.InputText = "Test";
         var headerDuringProcessing = string.Empty;
-        
+
         _mockAgent.Setup(a => a.PromptAgentAsync(It.IsAny<AgentResponseRequest>()))
             .Callback(() => headerDuringProcessing = _viewModel.HeaderText)
             .ReturnsAsync("Response");
@@ -204,7 +206,7 @@ public class MainWindowViewModelTests
         // Arrange
         _viewModel.InputText = "Test";
         var wasBusy = false;
-        
+
         _mockAgent.Setup(a => a.PromptAgentAsync(It.IsAny<AgentResponseRequest>()))
             .Callback(() => wasBusy = _viewModel.IsBusy)
             .ReturnsAsync("Response");

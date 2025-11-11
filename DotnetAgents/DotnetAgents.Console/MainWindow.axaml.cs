@@ -24,7 +24,7 @@ namespace DotnetAgents.Console
             // Initialize the agent
             try
             {
-                _agent = new Agent();
+                //_agent = new Agent();
                 UpdateHeader("AGENT CHAT - Ready");
                 UpdateChatDisplay("Agent initialized successfully.\nType your message below and press Enter or click [S]end.\n\n");
             }
@@ -141,8 +141,8 @@ namespace DotnetAgents.Console
             try
             {
                 // Call the agent
-                var request = new AgentResponseRequest { Prompt = userInput };
-                var response = await _agent.PromptAgentAsync(request);
+                //var request = new AgentResponseRequest { Prompt = userInput };
+                //var response = await _agent.PromptAgentAsync(request);
                 
                 // Remove "Processing..." and display response
                 var textBlock = this.FindControl<TextBlock>("agentTextBox");
@@ -150,7 +150,7 @@ namespace DotnetAgents.Console
                 {
                     textBlock.Text = textBlock.Text.Replace("AGENT: [Processing...]\n", "");
                 }
-                AppendChatDisplay($"AGENT:\n{response}\n\n");
+                //AppendChatDisplay($"AGENT:\n{response}\n\n");
                 
                 // Update header back to ready
                 UpdateHeader("AGENT CHAT - Ready");
