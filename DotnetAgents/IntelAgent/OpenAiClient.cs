@@ -20,7 +20,7 @@ namespace DotnetAgents.Core
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<OpenAiClient> _logger;
         private readonly string _apiKey;
-        private readonly string _baseUrl;
+        private readonly string? _baseUrl;
         private readonly string _model;
 
         private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -34,15 +34,24 @@ namespace DotnetAgents.Core
             _httpClientFactory = httpClientFactory;
             _logger = logger;
 
-            _baseUrl = config["OpenRouter:BaseUrl"] ?? string.Empty;
-            _apiKey = config["OpenRouter:ApiKey"] ?? throw new InvalidOperationException("OpenRouter:ApiKey not configured");
-            _model = config["OpenRouter:Model"] ?? throw new InvalidOperationException("OpenRouter:Model not configured");
+            _baseUrl = config["OpenRouter:BaseUrl"];
+            _apiKey = config["OpenRouter:ApiKey"] ?? throw new InvalidOperationException("OpenRouter:ApiKey (OPENAI_API_KEY) not configured");
+            _model = config["OpenRouter:Model"] ?? throw new InvalidOperationException("OpenRouter:Model (OPENAI_MODEL_NAME) not configured");
         }
 
         public async Task<LlmResponse> GetCompletionAsync(List<Message> history, List<string> toolSchemas)
         {
             var client = _httpClientFactory.CreateClient("OpenAiClient");
+            
+            // Ensure we have a base URL
+            if (string.IsNullOrEmpty(_baseUrl))
+            {
+                _logger.LogError("OpenRouter BaseUrl is not configured");
+                return new LlmResponse("Error: OpenRouter BaseUrl is not configured", null);
+            }
+
             client.BaseAddress = new Uri(_baseUrl);
+            client.Timeout = TimeSpan.FromSeconds(60); // Set explicit 60 second timeout
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
             // OpenRouter requires these headers
@@ -51,9 +60,13 @@ namespace DotnetAgents.Core
 
             var requestPayload = BuildRequestPayload(history, toolSchemas);
 
+            _logger.LogInformation("Sending LLM request to {BaseUrl} with model {Model}", _baseUrl, _model);
+
             try
             {
                 var response = await client.PostAsJsonAsync("chat/completions", requestPayload, _jsonOptions);
+
+                _logger.LogInformation("Received LLM response with status code {StatusCode}", response.StatusCode);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -64,6 +77,7 @@ namespace DotnetAgents.Core
 
                 // First, read the response as a string
                 var responseBody = await response.Content.ReadAsStringAsync();
+                _logger.LogDebug("LLM response body: {ResponseBody}", responseBody);
 
                 OpenAiResponse openAiResponse;
                 try
@@ -93,11 +107,26 @@ namespace DotnetAgents.Core
                 {
                     responseContent ??= "[tool call]"; // Ensure content isn't null if only tools are called
                     domainToolCalls = choice.Message.ToolCalls
-                        .Select(tc => new ToolCall(tc.Function.Name, tc.Function.Arguments))
+                        .Select(tc => new ToolCall(tc.Id, tc.Function.Name, tc.Function.Arguments))
                         .ToList();
                 }
 
                 return new LlmResponse(responseContent, domainToolCalls);
+            }
+            catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+            {
+                _logger.LogError(ex, "LLM API call timed out after 60 seconds");
+                return new LlmResponse("Error: Request timed out", null);
+            }
+            catch (TaskCanceledException ex)
+            {
+                _logger.LogError(ex, "LLM API call was cancelled");
+                return new LlmResponse("Error: Request was cancelled", null);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "HTTP error during LLM API call");
+                return new LlmResponse($"Error: HTTP request failed - {ex.Message}", null);
             }
             catch (Exception ex)
             {
@@ -108,10 +137,46 @@ namespace DotnetAgents.Core
 
         private OpenAiRequest BuildRequestPayload(List<Message> history, List<string> toolSchemas)
         {
+            // Detect provider from model name
+            bool isAnthropic = _model.Contains("claude", StringComparison.OrdinalIgnoreCase) ||
+                               _model.Contains("anthropic", StringComparison.OrdinalIgnoreCase);
+            bool isGemini = _model.Contains("gemini", StringComparison.OrdinalIgnoreCase) ||
+                            _model.Contains("google", StringComparison.OrdinalIgnoreCase);
+            
             var request = new OpenAiRequest
             {
                 Model = _model,
-                Messages = history.Select(m => new RequestMessage(m.Role, m.Content)).ToList()
+                Messages = history.Select(m =>
+                {
+                    // For tool results, format according to provider
+                    if (m.Role == "tool" && !string.IsNullOrEmpty(m.ToolCallId))
+                    {
+                        if (isAnthropic)
+                        {
+                            // Anthropic/Claude format
+                            return new RequestMessage(
+                                "user", // Anthropic uses "user" role for tool results
+                                JsonSerializer.Serialize(new
+                                {
+                                    type = "tool_result",
+                                    tool_use_id = m.ToolCallId,
+                                    content = m.Content
+                                })
+                            );
+                        }
+                        else if (isGemini)
+                        {
+                            // Google Gemini format
+                            return new RequestMessage("function", m.Content);
+                        }
+                        else
+                        {
+                            // OpenAI/default format
+                            return new RequestMessage("tool", m.Content);
+                        }
+                    }
+                    return new RequestMessage(m.Role, m.Content);
+                }).ToList()
             };
 
             if (toolSchemas != null && toolSchemas.Any())
@@ -120,6 +185,10 @@ namespace DotnetAgents.Core
                     new RequestTool(JsonSerializer.Deserialize<JsonElement>(schema))
                 ).ToList();
             }
+
+            // Log the actual JSON being sent to help debug
+            var jsonPayload = JsonSerializer.Serialize(request, _jsonOptions);
+            _logger.LogInformation("Request payload being sent: {JsonPayload}", jsonPayload);
 
             return request;
         }

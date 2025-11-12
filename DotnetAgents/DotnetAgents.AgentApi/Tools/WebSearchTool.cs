@@ -24,12 +24,19 @@ namespace DotnetAgents.AgentApi.Tools
 
         public string GetJsonSchema()
         {
-            return @"
+            return $$"""
             {
-                ""type"": ""object"",
-                ""properties"": { ""query"": { ""type"": ""string"" } },
-                ""required"": [""query""]
-            }";
+              "name": "{{this.Name}}",
+              "description": "{{this.Description}}",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "query": { "type": "string" }
+                },
+                "required": ["query"]
+              }
+            }
+            """;
         }
 
         private record SearchArgs(string query);

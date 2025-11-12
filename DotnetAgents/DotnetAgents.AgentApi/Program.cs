@@ -11,6 +11,7 @@ using DotnetAgents.AgentApi.Models;
 using DotnetAgents.AgentApi.Model; // For PromptAgentRequest/Response
 using Microsoft.Extensions.DependencyInjection;
 using IntelAgent;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,11 +31,34 @@ builder.EnrichNpgsqlDbContext<AgentDbContext>(configureSettings: settings =>
 });
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "DotnetAgents API",
+        Version = "v1",
+        Description = "Multi-provider AI agent API with tool calling support"
+    });
+    
+    // Enable XML documentation if available
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        options.IncludeXmlComments(xmlPath);
+    }
+});
 
 // 2. Register Agent Core Logic (Chapter 1 & 2)
 builder.Services.AddScoped<IIntelAgent, Agent>();
 builder.Services.AddSingleton<IOpenAiClient, OpenAiClient>(); // Mock for now
+
+// Register HttpClient for OpenAiClient
+builder.Services.AddHttpClient("OpenAiClient", client =>
+{
+    // Default timeout is handled in OpenAiClient itself
+    client.Timeout = TimeSpan.FromSeconds(120); // 2 minute timeout as backup
+});
 
 // 3. Register State Manager (Chapter 5)
 builder.Services.AddSingleton<IAgentStateManager, RedisAgentStateManager>();
@@ -72,7 +96,15 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "DotnetAgents API v1");
+        options.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.List); // Expand operations list
+        options.DefaultModelsExpandDepth(2); // Expand model schemas
+        options.DisplayRequestDuration(); // Show request duration
+        options.EnableDeepLinking(); // Enable deep linking for sharing
+        options.EnableFilter(); // Enable search/filter box
+    });
 }
 
 app.UseHttpsRedirection();
@@ -106,7 +138,13 @@ app.MapPost("/api/agent/prompt", async (PromptAgentRequest request, AgentDbConte
     });
 })
 .WithName("PromptAgent")
-.WithTags("Agent");
+.WithTags("Agent")
+.WithOpenApi(operation =>
+{
+    operation.Summary = "Send a prompt to the agent";
+    operation.Description = "Sends a prompt to the agent with optional context and parameters. The agent will process the request using available tools.";
+    return operation;
+});
 
 // Agent health check endpoint
 app.MapGet("/api/agent/health", async (AgentDbContext db) =>
@@ -151,7 +189,17 @@ app.MapPost("/api/tasks", async (string goal, AgentDbContext db) =>
     // Return a 202 Accepted with a URL to check status
     return Results.Accepted($"/api/tasks/{task.Id}", task);
 })
-.WithName("CreateAgentTask");
+.WithName("CreateAgentTask")
+.WithTags("Tasks")
+.WithOpenApi(operation =>
+{
+    operation.Summary = "Create a new agent task";
+    operation.Description = "Creates a new task for the agent to execute asynchronously";
+    var parameter = operation.Parameters[0];
+    parameter.Description = "The goal or task description for the agent";
+    parameter.Example = new Microsoft.OpenApi.Any.OpenApiString("list files in current directory");
+    return operation;
+});
 
 app.MapGet("/api/tasks/{id}", async (Guid id, AgentDbContext db) =>
 {
@@ -159,7 +207,6 @@ app.MapGet("/api/tasks/{id}", async (Guid id, AgentDbContext db) =>
     return task == null ? Results.NotFound() : Results.Ok(task);
 })
 .WithName("GetAgentTaskStatus");
-
 
 // ---
 // 12. TELEMETRY ENDPOINTS (conditionally registered based on configuration)

@@ -8,8 +8,8 @@ namespace DotnetAgents.Core.Models
     /// </summary>
     public class AgentTask
     {
-        public Guid Id { get; set; }        
-        public string? Goal { get; set; }        
+        public Guid Id { get; set; }
+        public string? Goal { get; set; } = string.Empty;     
         public Status Status { get; set; } // e.g., "Queued", "Running", "Thinking", "Completed", "Failed"
         public string? CreatedByUserId { get; set; }        
     }

@@ -9,8 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <!-- Core testing packages -->
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+        <!-- Core testing packages -->        
         <PackageReference Include="NUnit" Version="4.2.2" />
         <PackageReference Include="NUnit.Analyzers" Version="4.3.0">
             <PrivateAssets>all</PrivateAssets>
@@ -18,10 +17,15 @@
         </PackageReference>
         <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
         <PackageReference Include="Moq" Version="4.20.72" />
-        <PackageReference Include="coverlet.collector" Version="6.0.2">
+        <PackageReference Include="coverlet.collector" Version="6.0.4">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+		<!--<PackageReference Include="Aspire.Hosting.Testing" Version="13.0.0" />-->
+		<PackageReference Include="FluentAssertions" Version="8.8.0" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+		<PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+		<PackageReference Include="xunit.v3" Version="3.2.0" />					
     </ItemGroup>
 
     <ItemGroup>

@@ -24,12 +24,19 @@ namespace DotnetAgents.AgentApi.Tools
 
         public string GetJsonSchema()
         {
-            return @"
+            return $$"""
             {
-                ""type"": ""object"",
-                ""properties"": { ""command"": { ""type"": ""string"" } },
-                ""required"": [""command""]
-            }";
+              "name": "{{this.Name}}",
+              "description": "{{this.Description}}",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "command": { "type": "string" }
+                },
+                "required": ["command"]
+              }
+            }
+            """;
         }
 
         private record ShellArgs(string command);

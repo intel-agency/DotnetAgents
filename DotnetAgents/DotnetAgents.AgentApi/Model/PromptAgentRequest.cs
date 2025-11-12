@@ -1,3 +1,6 @@
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+
 namespace DotnetAgents.AgentApi.Model;
 
 /// <summary>
@@ -8,7 +11,9 @@ public class PromptAgentRequest
     /// <summary>
     /// The prompt text to send to the agent
     /// </summary>
-    public string Prompt { get; set; } = string.Empty;
+    [Required]
+    [DefaultValue("list files in current directory")]
+    public string Prompt { get; set; } = "list files in current directory";
 
     /// <summary>
     /// Optional context or additional parameters
@@ -18,10 +23,12 @@ public class PromptAgentRequest
     /// <summary>
     /// Maximum tokens for the response
     /// </summary>
-    public int? MaxTokens { get; set; }
+    [DefaultValue(4000)]
+    public int? MaxTokens { get; set; } = 4000;
 
     /// <summary>
     /// Temperature for response generation (0.0 to 1.0)
     /// </summary>
+    [DefaultValue(0.1)]
     public double? Temperature { get; set; } = 0.1d;
 }

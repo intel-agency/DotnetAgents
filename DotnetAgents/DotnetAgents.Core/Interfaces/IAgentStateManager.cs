@@ -4,10 +4,8 @@ using System.Threading.Tasks;
 namespace DotnetAgents.Core.Interfaces
 {
     // A simple record for chat history messages
-    // Note: The guide re-defines this, but we already have a
-    // private record 'Message' in our Agent class.
-    // To share it, we should make this one public.
-    public record Message(string Role, string Content);
+    // Extended to support tool results with tool_use_id for Anthropic/Claude compatibility
+    public record Message(string Role, string Content, string? ToolCallId = null);
 
     /// <summary>
     /// Manages the short-term working memory (chat history) for an agent task.

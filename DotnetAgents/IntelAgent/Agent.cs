@@ -65,6 +65,18 @@ namespace IntelAgent
                     // 2. THINK
                     // We will add intermediate (Redis/SignalR) status updates here later
                     var toolSchemas = _toolDispatcher.GetAllToolSchemas();
+                    
+                    // DEBUGGING: Log the tool schemas being sent
+                    _logger.LogInformation("Tool schemas count: {Count}", toolSchemas?.Count ?? 0);
+                    if (toolSchemas != null)
+                    {
+                        foreach (var schema in toolSchemas)
+                        {
+                            _logger.LogInformation("Tool schema: {Schema}", schema);
+                        }
+                    }
+                    // DEBUGGING END
+                    
                     var llmResponse = await _llmClient.GetCompletionAsync(history, toolSchemas);
                     history.Add(new Message("assistant", llmResponse.Content)); // Add LLM thought
 
@@ -76,7 +88,8 @@ namespace IntelAgent
                             var toolResult = await _toolDispatcher.DispatchAsync(
                                 toolCall.ToolName,
                                 toolCall.ToolArgumentsJson);
-                            history.Add(new Message("tool", toolResult));
+                            // Include the tool call ID so Claude can match the result to the request
+                            history.Add(new Message("tool", toolResult, toolCall.Id));
                         }
                     }
                     else

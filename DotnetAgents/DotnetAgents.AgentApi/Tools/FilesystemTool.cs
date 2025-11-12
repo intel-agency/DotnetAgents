@@ -20,20 +20,26 @@ namespace DotnetAgents.AgentApi.Tools
 
         public string GetJsonSchema()
         {
-            // This schema allows one of two operations
-            return @"
+            // C# 11+ raw string literal.
+            // Notice "type": "function" is GONE. We are only returning the function definition.
+            return $$"""
             {
-                ""type"": ""object"",
-                ""properties"": {
-                    ""operation"": { ""type"": ""string"", ""enum"": [""read"", ""write""] },
-                    ""path"": { ""type"": ""string"" },
-                    ""content"": { ""type"": ""string"" }
+              "name": "{{this.Name}}",
+              "description": "{{this.Description}}",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "operation": { "type": "string", "enum": ["read", "write"] },
+                  "path": { "type": "string" },
+                  "content": { "type": "string" }
                 },
-                ""required"": [""operation"", ""path""]
-            }";
+                "required": ["operation", "path"]
+              }
+            }
+            """;
         }
 
-        private record FileArgs(string operation, string path, string content);
+        private sealed record FileArgs(string Operation, string Path, string Content);
 
         public async Task<string> ExecuteAsync(string jsonArguments)
         {
@@ -44,28 +50,28 @@ namespace DotnetAgents.AgentApi.Tools
                 return "Error: Invalid arguments for file_system tool.";
             }
 
-            if (!_permissionService.CanAccessFile(args.path, args.operation))
+            if (!_permissionService.CanAccessFile(args.Path, args.Operation))
             {
-                return $"Error: Access denied for {args.operation} on {args.path}.";
+                return $"Error: Access denied for {args.Operation} on {args.Path}.";
             }
 
             try
             {
-                if (args.operation == "read")
+                if (args.Operation == "read")
                 {
-                    if (!File.Exists(args.path)) return $"Error: File not found at {args.path}.";
-                    return await File.ReadAllTextAsync(args.path);
+                    if (!File.Exists(args.Path)) return $"Error: File not found at {args.Path}.";
+                    return await File.ReadAllTextAsync(args.Path);
                 }
-                else if (args.operation == "write")
+                else if (args.Operation == "write")
                 {
                     // Ensure directory exists
-                    var directory = Path.GetDirectoryName(args.path);
+                    var directory = Path.GetDirectoryName(args.Path);
                     if (directory != null && !Directory.Exists(directory))
                     {
                         Directory.CreateDirectory(directory);
                     }
-                    await File.WriteAllTextAsync(args.path, args.content ?? string.Empty);
-                    return $"Successfully wrote {args.content?.Length ?? 0} bytes to {args.path}.";
+                    await File.WriteAllTextAsync(args.Path, args.Content ?? string.Empty);
+                    return $"Successfully wrote {args.Content?.Length ?? 0} bytes to {args.Path}.";
                 }
                 return "Error: Unknown file operation.";
             }
