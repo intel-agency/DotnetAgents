@@ -34,11 +34,8 @@ namespace DotnetAgents.Core
             _httpClientFactory = httpClientFactory;
             _logger = logger;
 
-            _baseUrl = config["OpenRouter:BaseUrl"]/* ?? "https://openrouter.ai/api/v1"*/;
+            _baseUrl = config["OpenRouter:BaseUrl"] ?? string.Empty;
             _apiKey = config["OpenRouter:ApiKey"] ?? throw new InvalidOperationException("OpenRouter:ApiKey not configured");
-            // TEMPORARY DEBUGGING:
-            //_apiKey = "sk-or-v1-alskdfjldaksfjaksdjfkaljfapjfk pajf ;lsdksla;faDUMMY_KEYdskljmfpiksojf";
-            // TEMPORARY DEBUGGING:
             _model = config["OpenRouter:Model"] ?? throw new InvalidOperationException("OpenRouter:Model not configured");
         }
 
@@ -64,7 +61,7 @@ namespace DotnetAgents.Core
                     _logger.LogError("LLM API call failed with status {StatusCode}: {ErrorBody}", response.StatusCode, errorBody);
                     return new LlmResponse($"Error: API call failed. {errorBody}", null);
                 }
-                
+
                 // First, read the response as a string
                 var responseBody = await response.Content.ReadAsStringAsync();
 
@@ -79,7 +76,7 @@ namespace DotnetAgents.Core
                     // If it fails, log the *actual* HTML we received. This is the real error.
                     _logger.LogError(jsonEx, "Failed to deserialize LLM response. The server (OpenRouter) sent HTML/XML instead of JSON. Response Body: {ResponseBody}", responseBody);
                     return new LlmResponse($"Error: Invalid JSON response from server. {jsonEx.Message}", null);
-                }                
+                }
 
                 var choice = openAiResponse?.Choices.FirstOrDefault();
                 if (choice == null)
