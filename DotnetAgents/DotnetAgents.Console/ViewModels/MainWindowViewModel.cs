@@ -1,10 +1,12 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using IntelAgent;
-using IntelAgent.Model;
 using DotnetAgents.Console.Services;
+using DotnetAgents.Core.Models;
 
 namespace DotnetAgents.Console.ViewModels;
+
+
 
 /// <summary>
 /// ViewModel for the MainWindow - Contains all testable business logic
@@ -33,7 +35,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
         // Initialize agent
         try
         {
-            _agent = new Agent();
+            //_agent = new Agent();
             HeaderText = _headerService.GetReadyStatus();
             ChatText = _formatter.FormatWelcomeMessage();
         }

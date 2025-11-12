@@ -11,7 +11,7 @@ public class AgentIntegrationTests
         // Arrange - Clear environment variables to simulate missing configuration
         var oldApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
         var oldModelName = Environment.GetEnvironmentVariable("OPENAI_MODEL_NAME");
-        
+
         try
         {
             Environment.SetEnvironmentVariable("OPENAI_API_KEY", null);
@@ -39,7 +39,7 @@ public class AgentIntegrationTests
         // Arrange - Set valid environment variables
         var oldApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
         var oldModelName = Environment.GetEnvironmentVariable("OPENAI_MODEL_NAME");
-        
+
         try
         {
             Environment.SetEnvironmentVariable("OPENAI_API_KEY", "test-key");

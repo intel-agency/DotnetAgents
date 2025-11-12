@@ -355,13 +355,13 @@ Add database-specific monitoring:
 
 ### Metrics to Track
 
-| Metric | Description | How to Collect |
-|--------|-------------|----------------|
-| **Update Frequency** | How often each task is updated | `UpdateCount / Duration` |
-| **Write Latency** | Time to persist each update | EF Core interceptor |
-| **State Transitions** | Timeline of status changes | Track `Status` + `LastUpdatedAt` |
-| **Concurrent Updates** | Tasks updated simultaneously | Count updates within 1s window |
-| **Database Load** | Total writes/sec for all tasks | Aggregate `SaveChanges` calls |
+| Metric                 | Description                    | How to Collect                   |
+| ---------------------- | ------------------------------ | -------------------------------- |
+| **Update Frequency**   | How often each task is updated | `UpdateCount / Duration`         |
+| **Write Latency**      | Time to persist each update    | EF Core interceptor              |
+| **State Transitions**  | Timeline of status changes     | Track `Status` + `LastUpdatedAt` |
+| **Concurrent Updates** | Tasks updated simultaneously   | Count updates within 1s window   |
+| **Database Load**      | Total writes/sec for all tasks | Aggregate `SaveChanges` calls    |
 
 ### Database Timeline Example
 ```
