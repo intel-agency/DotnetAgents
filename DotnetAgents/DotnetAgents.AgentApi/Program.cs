@@ -247,4 +247,4 @@ startupLogger.LogInformation("🚀 DotnetAgents.AgentApi is ready and listening 
 startupLogger.LogInformation("📊 Swagger UI: {SwaggerUrl}", app.Environment.IsDevelopment() ? "/swagger" : "disabled in production");
 startupLogger.LogInformation("🔗 Health check: /api/agent/health");
 
-app.Run();
+await app.RunAsync();
