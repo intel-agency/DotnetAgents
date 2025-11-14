@@ -4,15 +4,39 @@
 // see: https://zed.dev/docs/debugger
 [
   {
-    "label": "debug IntelAgent"
-  },
-  {
     "label": "Launch Core Service (with build)",
     "adapter": "netcoredbg",
     "request": "launch",
     "preLaunchTask": "build",
     "program": "/Users/xxx/Repositories/axxx/services/xxx/service/bin/Debug/net9.0/service.dll",
     "cwd": "/Users/xxx/Repositories/xxx/services/xxx/service",
+    "env": { "ASPNETCORE_ENVIRONMENT": "Development" }
+  },
+  {
+    "label": ".NET Aspire AppHost",
+    "adapter": "netcoredbg",
+    "request": "launch",
+    "preLaunchTask": "dotnet: build",
+    "program": "DotnetAgents/DotnetAgents.AppHost/bin/Debug/net9.0/DotnetAgents.AppHost.dll",
+    "cwd": "DotnetAgents/DotnetAgents.AppHost",
+    "env": { "ASPNETCORE_ENVIRONMENT": "Development" }
+  },
+  {
+    "label": ".NET Agent API",
+    "adapter": "netcoredbg",
+    "request": "launch",
+    "preLaunchTask": "dotnet: build",
+    "program": "DotnetAgents/DotnetAgents.AgentApi/bin/Debug/net9.0/DotnetAgents.AgentApi.dll",
+    "cwd": "DotnetAgents/DotnetAgents.AgentApi",
+    "env": { "ASPNETCORE_ENVIRONMENT": "Development" }
+  },
+  {
+    "label": ".NET Web Frontend",
+    "adapter": "netcoredbg",
+    "request": "launch",
+    "preLaunchTask": "dotnet: build",
+    "program": "DotnetAgents/DotnetAgents.Web/bin/Debug/net9.0/DotnetAgents.Web.dll",
+    "cwd": "DotnetAgents/DotnetAgents.Web",
     "env": { "ASPNETCORE_ENVIRONMENT": "Development" }
   }
 ]
