@@ -104,6 +104,7 @@ if (app.Environment.IsDevelopment())
         options.DisplayRequestDuration(); // Show request duration
         options.EnableDeepLinking(); // Enable deep linking for sharing
         options.EnableFilter(); // Enable search/filter box
+        options.EnableTryItOutByDefault(); // Enable "Try it out" by default
     });
 }
 
