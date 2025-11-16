@@ -1,4 +1,6 @@
 using DotnetAgents.AgentApi.Data;
+using DotnetAgents.Core;
+using DotnetAgents.Core.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,6 +52,26 @@ namespace DotnetAgents.AgentApi.Services
                     await dbContext.Database.MigrateAsync(cancellationToken);
                     
                     _logger.LogInformation("Database migration completed successfully.");
+
+                    // Requeue stale Running tasks to Queued on startup
+                    var cutoff = DateTime.UtcNow.AddMinutes(-30);
+                    var staleRunning = await dbContext.AgentTasks
+                        .Where(t => t.Status == Status.Running &&
+                                    ((t.LastUpdatedAt != null && t.LastUpdatedAt < cutoff) ||
+                                     (t.StartedAt != null && t.StartedAt < cutoff)))
+                        .ToListAsync(cancellationToken);
+
+                    if (staleRunning.Count > 0)
+                    {
+                        foreach (var t in staleRunning)
+                        {
+                            t.Status = Status.Queued;
+                            t.LastUpdatedAt = DateTime.UtcNow;
+                            t.UpdateCount++;
+                        }
+                        await dbContext.SaveChangesAsync(cancellationToken);
+                        _logger.LogWarning("Requeued {Count} stale Running tasks to Queued.", staleRunning.Count);
+                    }
                     return; // Success - exit the method
                 }
                 catch (Exception ex) when (ex is Npgsql.NpgsqlException 

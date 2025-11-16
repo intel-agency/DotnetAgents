@@ -1,4 +1,4 @@
-﻿using DotnetAgents.Core.Interfaces;
+using DotnetAgents.Core.Interfaces;
 using Microsoft.Extensions.Configuration; // For IConfiguration
 using System.Net.Http;
 using System.Text.Json;
@@ -59,7 +59,7 @@ namespace DotnetAgents.AgentApi.Tools
             }
 
             var client = _httpClientFactory.CreateClient("GoogleSearch");
-            var url = $"https[://]www.googleapis.com/customsearch/v1?key={apiKey}&cx={cxId}&q={Uri.EscapeDataString(args.query)}";
+            var url = $"https://www.googleapis.com/customsearch/v1?key={apiKey}&cx={cxId}&q={Uri.EscapeDataString(args.query)}";
 
             try
             {
