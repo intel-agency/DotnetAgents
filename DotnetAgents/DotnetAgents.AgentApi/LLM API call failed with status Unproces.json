@@ -1,0 +1,91 @@
+LLM API call failed with status UnprocessableEntity: {
+    "error": {
+        "message": "Provider returned error",
+        "code": 422,
+        "metadata": {
+            "raw": {
+                "detail": [
+                    {
+                        "type": "missing",
+                        "loc": [
+                            "body",
+                            "tools",
+                            0,
+                            "function",
+                            "name"
+                        ],
+                        "msg": "Field required",
+                        "input": {
+                            "type": "object",
+                            "properties": {
+                                "operation": {
+                                    "type": "string",
+                                    "enum": [
+                                        "read",
+                                        "write"
+                                    ]
+                                },
+                                "path": {
+                                    "type": "string"
+                                },
+                                "content": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "operation",
+                                "path"
+                            ]
+                        }
+                    },
+                    {
+                        "type": "missing",
+                        "loc": [
+                            "body",
+                            "tools",
+                            1,
+                            "function",
+                            "name"
+                        ],
+                        "msg": "Field required",
+                        "input": {
+                            "type": "object",
+                            "properties": {
+                                "command": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "command"
+                            ]
+                        }
+                    },
+                    {
+                        "type": "missing",
+                        "loc": [
+                            "body",
+                            "tools",
+                            2,
+                            "function",
+                            "name"
+                        ],
+                        "msg": "Field required",
+                        "input": {
+                            "type": "object",
+                            "properties": {
+                                "query": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "query"
+                            ]
+                        }
+                    }
+                ]
+            },
+            "provider_name": "DeepInfra"
+        }
+    },
+    "user_id": "user_2yhgvjlxWmRoqpf0dPP86WcJmk7"
+}

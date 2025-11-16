@@ -1,6 +1,3 @@
-using Avalonia;
-using Avalonia.Headless;
-
 namespace DotnetAgents.Console.Tests;
 
 [SetUpFixture]
@@ -9,12 +6,9 @@ public class TestAppBuilder
     [OneTimeSetUp]
     public void Setup()
     {
-        // Initialize Avalonia with headless platform for testing
-        AppBuilder.Configure<App>()
-            .UseHeadless(new AvaloniaHeadlessPlatformOptions
-            {
-                UseHeadlessDrawing = false
-            })
-            .SetupWithoutStarting();
+        // Note: We're not initializing Avalonia for these tests
+        // because Headless rendering has compatibility issues with Consolonia.
+        // Tests focus on logic and state validation without full UI rendering.
+        // The MainWindow can still be instantiated for testing properties and state.
     }
 }

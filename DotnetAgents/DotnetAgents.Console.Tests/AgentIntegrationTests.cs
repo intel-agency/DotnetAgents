@@ -1,18 +1,17 @@
 using Avalonia.Controls;
-using Avalonia.Headless.NUnit;
 
 namespace DotnetAgents.Console.Tests;
 
 [TestFixture]
 public class AgentIntegrationTests
 {
-    [AvaloniaTest]
+    [Test]
     public void MainWindow_Handles_Missing_Environment_Variables()
     {
         // Arrange - Clear environment variables to simulate missing configuration
         var oldApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
         var oldModelName = Environment.GetEnvironmentVariable("OPENAI_MODEL_NAME");
-        
+
         try
         {
             Environment.SetEnvironmentVariable("OPENAI_API_KEY", null);
@@ -34,13 +33,13 @@ public class AgentIntegrationTests
         }
     }
 
-    [AvaloniaTest]
+    [Test]
     public void MainWindow_Shows_Ready_With_Valid_Configuration()
     {
         // Arrange - Set valid environment variables
         var oldApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
         var oldModelName = Environment.GetEnvironmentVariable("OPENAI_MODEL_NAME");
-        
+
         try
         {
             Environment.SetEnvironmentVariable("OPENAI_API_KEY", "test-key");

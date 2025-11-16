@@ -5,10 +5,7 @@
   {
     "label": "Build DotnetAgents/DotnetAgents.sln",
     "command": "dotnet",
-    "args": [
-      "build",
-      "DotnetAgents/DotnetAgents.slnx"
-    ]
+    "args": ["build", "DotnetAgents/DotnetAgents.slnx"]
   },
   {
     "label": "build",
@@ -22,27 +19,21 @@
     "label": "dotnet build worktree root",
     "command": "dotnet",
     "show_command": true,
-    "args": [
-      "build"
-    ],
+    "args": ["build"],
     "cwd": "$ZED_WORKTREE_ROOT"
   },
   {
     "label": "dotnet run worktree root",
     "command": "dotnet",
     "show_command": true,
-    "args": [
-      "run"
-    ],
+    "args": ["run"],
     "cwd": "$ZED_WORKTREE_ROOT"
   },
   {
     "label": "dotnet debug worktree root",
     "command": "netcoredbg",
     "show_command": true,
-    "args": [
-      "-- dotnet run"
-    ],
+    "args": ["-- dotnet run"],
     "cwd": "$ZED_WORKTREE_ROOT"
   },
   //
@@ -74,6 +65,34 @@
     "command": "devcontainer run-user-commands - workspace-folder ${ZED_WORKTREE_ROOT}",
     "use_new_terminal": true,
     "allow_concurrent_runs": false,
+    "reveal": "always"
+  },
+  {
+    "label": "build: Debug",
+    "command": "dotnet",
+    "args": [
+      "build",
+      "DotnetAgents/DotnetAgents.slnx",
+      "--configuration",
+      "Debug"
+    ],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "show_command": true,
+    "show_summary": true,
+    "reveal": "always"
+  },
+  {
+    "label": "build: Release",
+    "command": "dotnet",
+    "args": [
+      "build",
+      "DotnetAgents/DotnetAgents.slnx",
+      "--configuration",
+      "Release"
+    ],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "show_command": true,
+    "show_summary": true,
     "reveal": "always"
   }
 ]

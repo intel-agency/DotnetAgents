@@ -1,6 +1,6 @@
 using System;
 
-namespace IntelAgent.Model;
+namespace DotnetAgents.Core.Models;
 
 public record AgentResponseRequest
 {

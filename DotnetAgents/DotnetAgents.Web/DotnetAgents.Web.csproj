@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.OpenApi" Version="2.3.9" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\DotnetAgents.ServiceDefaults\DotnetAgents.ServiceDefaults.csproj" />
     <ProjectReference Include="..\DotnetAgents.AgentApi\DotnetAgents.AgentApi.csproj" />
   </ItemGroup>

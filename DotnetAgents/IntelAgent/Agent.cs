@@ -1,82 +1,122 @@
-﻿using Microsoft.Extensions.AI;
-using System.ClientModel;
-using OpenAI;
-using IntelAgent.Model;
+﻿using DotnetAgents.Core.Interfaces;
+using DotnetAgents.Core.Models;
+using DotnetAgents.Core; // For Status
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace IntelAgent;
-
-public class Agent : IAgent
+namespace IntelAgent
 {
-    private readonly IChatClient _chatClient;
-    private readonly Queue<AgentResponseRequest> _requestQueue = new();
-
-    public Agent(string key, string model, string? endpoint = null)
+    /// <summary>
+    /// The main "brain" of the agent. Implements the Think -> Act loop.
+    /// </summary>
+    public class Agent : IIntelAgent
     {
-        _chatClient = CreateChatClient(key, model, endpoint);
-    }
+        private const int MAX_ITERATIONS = 10;
 
-    private static IChatClient CreateChatClient(string key, string model, string? endpoint)
-    {
-        var clientOptions = new OpenAIClientOptions
+        private readonly ILogger<Agent> _logger;
+        private readonly IOpenAiClient _llmClient;
+        private readonly IToolDispatcher _toolDispatcher;
+        private readonly IAgentStateManager _stateManager;
+        private readonly IConfiguration _config;
+
+        public Agent(
+            ILogger<Agent> logger,
+            IOpenAiClient llmClient,
+            IToolDispatcher toolDispatcher,
+            IAgentStateManager stateManager,
+            IConfiguration config)
         {
-            Endpoint = new Uri(endpoint ?? "https://openrouter.ai/api/v1")
-        };
-
-        var openAiClient = new OpenAIClient(new ApiKeyCredential(key), clientOptions);
-
-        // OpenRouter expects the model name without the "openrouter/" prefix
-        var modelName = model.StartsWith("openrouter/", StringComparison.OrdinalIgnoreCase)
-            ? model.Substring("openrouter/".Length)
-            : model;
-
-        return openAiClient.GetChatClient(modelName).AsIChatClient();
-    }
-
-    public Agent()
-    {
-        var key = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-        var model = Environment.GetEnvironmentVariable("OPENAI_MODEL_NAME");
-        var endpoint = Environment.GetEnvironmentVariable("OPENAI_ENDPOINT");
-
-        if (string.IsNullOrWhiteSpace(key))
-        {
-            throw new InvalidOperationException("OPENAI_API_KEY environment variable is not set.");
-        }
-        if (string.IsNullOrWhiteSpace(model))
-        {
-            throw new InvalidOperationException("OPENAI_MODEL_NAME environment variable is not set.");
-        }
-        if (string.IsNullOrWhiteSpace(endpoint))
-        {
-            // empty endpoint is allowed
+            _logger = logger;
+            _llmClient = llmClient;
+            _toolDispatcher = toolDispatcher;
+            _stateManager = stateManager;
+            _config = config;
         }
 
-        _chatClient = CreateChatClient(key, model, endpoint);
-    }   
+        public async Task ExecuteTaskAsync(AgentTask task, CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("Starting task {TaskId}: {Goal}", task.Id, task.Goal);
 
-    public async Task<string> PromptAgentAsync(AgentResponseRequest request)
-    {
-        return (await GetResponseAsync(request.Prompt)).ToString();
-    }
+            // 1. Load or initialize state (from Redis)
+            var history = await _stateManager.LoadHistoryAsync(task.Id);
+            if (history.Count == 0)
+            {
+                var systemPromptTemplate = _config["AgentSettings:SystemPrompt"] ?? "You are a helpful C# agent.";
+                var systemPrompt = systemPromptTemplate.Replace("{DateTime.Now}", DateTime.Now.ToString("o"));
 
-    public Task<string> RequestPromptAgentAsync(AgentResponseRequest request)
-    {
-        throw new NotImplementedException();
-    }
+                history.Add(new Message("system", systemPrompt));
+                history.Add(new Message("user", task.Goal));
+            }
 
-    private async Task<ChatResponse> GetResponseAsync(string prompt)
-    {
-        string text = prompt;
-        string promptToSend = $"""
-            Respond to the following text:
-            {text}
-            """;
+            try
+            {
+                for (int i = 0; i < MAX_ITERATIONS; i++) // Max 10 iterations
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        _logger.LogInformation("Task {TaskId} was cancelled.", task.Id);
+                        break; // Exit loop, worker will set status
+                    }
 
-        // Submit the prompt and print out the response.
-        var response = await _chatClient.GetResponseAsync(promptToSend, new ChatOptions { MaxOutputTokens = 400 });
+                    // 2. THINK
+                    // We will add intermediate (Redis/SignalR) status updates here later
+                    var toolSchemas = _toolDispatcher.GetAllToolSchemas();
+                    
+                    // DEBUGGING: Log the tool schemas being sent
+                    _logger.LogInformation("Tool schemas count: {Count}", toolSchemas?.Count ?? 0);
+                    if (toolSchemas != null)
+                    {
+                        foreach (var schema in toolSchemas)
+                        {
+                            _logger.LogInformation("Tool schema: {Schema}", schema);
+                        }
+                    }
+                    // DEBUGGING END
+                    
+                    var llmResponse = await _llmClient.GetCompletionAsync(history, toolSchemas);
+                    history.Add(new Message("assistant", llmResponse.Content)); // Add LLM thought
 
-        Console.WriteLine(response);
+                    if (llmResponse.HasToolCalls)
+                    {
+                        // 3. ACT
+                        foreach (var toolCall in llmResponse.ToolCalls)
+                        {
+                            var toolResult = await _toolDispatcher.DispatchAsync(
+                                toolCall.ToolName,
+                                toolCall.ToolArgumentsJson);
+                            // Include the tool call ID so Claude can match the result to the request
+                            history.Add(new Message("tool", toolResult, toolCall.Id));
+                        }
+                    }
+                    else
+                    {
+                        // 4. FINISH
+                        _logger.LogInformation("Task {TaskId} completed.", task.Id);
+                        break; // Exit loop, worker will set status
+                    }
 
-        return response;
+                    // 5. Save state after each loop (to Redis)
+                    await _stateManager.SaveHistoryAsync(task.Id, history);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Task {TaskId} failed.", task.Id);
+                // Re-throw to let the worker service handle the "Failed" status
+                throw;
+            }
+            finally
+            {
+                // 6. Clean up state on completion (from Redis)
+                await _stateManager.ClearHistoryAsync(task.Id);
+            }
+        }
+
+        // The UpdateTaskStatus method has been REMOVED.
+        // The AgentWorkerService is now responsible for all durable DB status updates.
     }
 }

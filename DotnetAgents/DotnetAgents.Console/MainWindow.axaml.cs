@@ -4,7 +4,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using IntelAgent;
-using IntelAgent.Model;
+
 
 namespace DotnetAgents.Console
 {
@@ -16,15 +16,15 @@ namespace DotnetAgents.Console
         public MainWindow()
         {
             InitializeComponent();
-            
+
             // Add keyboard shortcuts
             inputTextBox.KeyDown += InputTextBox_KeyDown;
             this.KeyDown += Window_KeyDown;
-            
+
             // Initialize the agent
             try
             {
-                _agent = new Agent();
+                //_agent = new Agent();
                 UpdateHeader("AGENT CHAT - Ready");
                 UpdateChatDisplay("Agent initialized successfully.\nType your message below and press Enter or click [S]end.\n\n");
             }
@@ -131,7 +131,7 @@ namespace DotnetAgents.Console
             // Display user message
             AppendChatDisplay($"{Separator}\n");
             AppendChatDisplay($"YOU:\n{userInput}\n\n");
-            
+
             // Clear input box
             inputTextBox.Text = string.Empty;
 
@@ -141,17 +141,17 @@ namespace DotnetAgents.Console
             try
             {
                 // Call the agent
-                var request = new AgentResponseRequest { Prompt = userInput };
-                var response = await _agent.PromptAgentAsync(request);
-                
+                //var request = new AgentResponseRequest { Prompt = userInput };
+                //var response = await _agent.PromptAgentAsync(request);
+
                 // Remove "Processing..." and display response
                 var textBlock = this.FindControl<TextBlock>("agentTextBox");
                 if (textBlock != null && textBlock.Text != null)
                 {
                     textBlock.Text = textBlock.Text.Replace("AGENT: [Processing...]\n", "");
                 }
-                AppendChatDisplay($"AGENT:\n{response}\n\n");
-                
+                //AppendChatDisplay($"AGENT:\n{response}\n\n");
+
                 // Update header back to ready
                 UpdateHeader("AGENT CHAT - Ready");
             }
@@ -163,7 +163,7 @@ namespace DotnetAgents.Console
                     textBlock.Text = textBlock.Text.Replace("AGENT: [Processing...]\n", "");
                 }
                 AppendChatDisplay($"ERROR:\n{ex.Message}\n\n");
-                
+
                 // Update header to show error
                 UpdateHeader("AGENT CHAT - Error");
             }
