@@ -90,6 +90,12 @@ builder.Services.AddHostedService<AgentWorkerService>();
 // 10. Register HttpClient for WebSearchTool (Chapter 3)
 builder.Services.AddHttpClient("GoogleSearch");
 
+// 11. Register SignalR for real-time task updates (Phase 2)
+builder.Services.AddSignalR();
+
+// 12. Register Task Notification Service (Phase 2)
+builder.Services.AddScoped<ITaskNotificationService, TaskNotificationService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -210,7 +216,12 @@ app.MapGet("/api/tasks/{id}", async (Guid id, AgentDbContext db) =>
 .WithName("GetAgentTaskStatus");
 
 // ---
-// 12. TELEMETRY ENDPOINTS (conditionally registered based on configuration)
+// 12. SIGNALR HUB MAPPING (Phase 2)
+// ---
+app.MapHub<DotnetAgents.AgentApi.Hubs.TaskHub>("/taskHub");
+
+// ---
+// 13. TELEMETRY ENDPOINTS (conditionally registered based on configuration)
 // ---
 if (telemetryEnabled)
 {
