@@ -428,3 +428,6 @@ gha-creds-*.json
 docker/validation/logs/
 docker/validation/results.jsonl
 docker/.env
+
+
+!/DotnetAgents/DotnetAgents.Tests/bin/Debug/net9.0/TestResults/*

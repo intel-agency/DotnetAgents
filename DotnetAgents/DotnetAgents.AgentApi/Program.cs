@@ -7,6 +7,8 @@ using Microsoft.Extensions.Logging;
 using DotnetAgents.AgentApi.Tools;
 using DotnetAgents.AgentApi.Data;
 using DotnetAgents.AgentApi.Services;
+using DotnetAgents.AgentApi.Hubs;
+using DotnetAgents.AgentApi.Interfaces;
 using DotnetAgents.AgentApi.Models;
 using DotnetAgents.AgentApi.Model; // For PromptAgentRequest/Response
 using Microsoft.Extensions.DependencyInjection;
@@ -48,6 +50,10 @@ builder.Services.AddSwaggerGen(options =>
         options.IncludeXmlComments(xmlPath);
     }
 });
+
+// Register SignalR infrastructure for real-time notifications (Phase 2)
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<ITaskNotificationService, TaskNotificationService>();
 
 // 2. Register Agent Core Logic (Chapter 1 & 2)
 builder.Services.AddScoped<IIntelAgent, Agent>();
@@ -109,6 +115,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Map SignalR hub endpoint for task updates
+app.MapHub<TaskHub>("/taskHub");
 
 // 11. Map API Endpoints (Chapter 4)
 
