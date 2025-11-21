@@ -2,8 +2,8 @@
 
 - Repository: intel-agency/DotnetAgents
 - Branch: feature/phase-3-agent-worker
-- Total Threads Addressed: 13
-- Last verified: 2025-11-21T16:34:19Z (commit 1696ed5) — replies posted via GraphQL and threads resolved per ai-pr-comment-protocol.
+- Total Threads Addressed: 15
+- Last verified: 2025-11-21T20:07:47Z (commit e87593a) — replies posted via GraphQL and threads resolved per ai-pr-comment-protocol.
 
 | Thread ID             | Topic                                              | Resolution                                                                                                                                                                                |
 | --------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -20,4 +20,6 @@
 | PRRT_kwDOQNh2DM5jALzg | Tests mocking `GetService` vs `GetRequiredService` | Using a real DI container in the test ensures `GetRequiredService<T>` resolves exactly as production does.                                                                                |
 | PRRT_kwDOQNh2DM5jALzm | Undisposed CTS in test                             | Wrapped the cancellation token source in a `using` statement to dispose it deterministically.                                                                                             |
 | PRRT_kwDOQNh2DM5jALzu | Empty catch swallowing cancellation                | Added an explicit `try/await/catch (OperationCanceledException)` block with a comment explaining the expected cancellation path.                                                          |
+| PRRT_kwDOQNh2DM5jEGbt | Agent test asserting worker-owned StartedAt        | Removed the `task.StartedAt` assertion so the unit test now focuses solely on Agent responsibilities (iterations/result/progress) and no longer expects the worker-managed timestamp.     |
+| PRRT_kwDOQNh2DM5jEGb1 | Magic number error delay in AgentWorkerService     | Added a named `ErrorRetryDelay` TimeSpan constant and updated the catch block to await that value, eliminating the magic number and centralizing future tuning in one place.               |
 
