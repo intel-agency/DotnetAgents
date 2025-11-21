@@ -23,11 +23,11 @@ public class TaskNotificationService : ITaskNotificationService
 
     public async Task NotifyTaskStatusChanged(AgentTask task)
     {
-        try
-        {
-            _logger.LogInformation("Broadcasting status change for task {TaskId}: {Status}", task.Id, task.Status);
+        _logger.LogInformation("Broadcasting status change for task {TaskId}: {Status}", task.Id, task.Status);
 
-            await _hubContext.Clients
+        await ExecuteBroadcastAsync(
+            task.Id,
+            () => _hubContext.Clients
                 .Group(task.Id.ToString())
                 .SendAsync("TaskStatusChanged", new
                 {
@@ -41,21 +41,17 @@ public class TaskNotificationService : ITaskNotificationService
                     completedAt = task.CompletedAt,
                     duration = task.Duration?.ToString(),
                     elapsed = task.Elapsed?.ToString()
-                });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error broadcasting task status change for {TaskId}", task.Id);
-        }
+                }),
+            "status change");
     }
 
     public async Task NotifyTaskProgress(Guid taskId, int currentIteration, int maxIterations, string message)
     {
-        try
-        {
-            _logger.LogDebug("Broadcasting progress for task {TaskId}: {Current}/{Max}", taskId, currentIteration, maxIterations);
+        _logger.LogDebug("Broadcasting progress for task {TaskId}: {Current}/{Max}", taskId, currentIteration, maxIterations);
 
-            await _hubContext.Clients
+        await ExecuteBroadcastAsync(
+            taskId,
+            () => _hubContext.Clients
                 .Group(taskId.ToString())
                 .SendAsync("TaskProgress", new
                 {
@@ -64,41 +60,33 @@ public class TaskNotificationService : ITaskNotificationService
                     maxIterations,
                     message,
                     timestamp = DateTime.UtcNow
-                });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error broadcasting task progress for {TaskId}", taskId);
-        }
+                }),
+            "progress update");
     }
 
     public async Task NotifyTaskStarted(Guid taskId)
     {
-        try
-        {
-            _logger.LogInformation("Broadcasting task started for {TaskId}", taskId);
+        _logger.LogInformation("Broadcasting task started for {TaskId}", taskId);
 
-            await _hubContext.Clients
+        await ExecuteBroadcastAsync(
+            taskId,
+            () => _hubContext.Clients
                 .Group(taskId.ToString())
                 .SendAsync("TaskStarted", new
                 {
                     taskId,
                     startedAt = DateTime.UtcNow
-                });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error broadcasting task started for {TaskId}", taskId);
-        }
+                }),
+            "start notification");
     }
 
     public async Task NotifyTaskCompleted(Guid taskId, string? result, string? errorMessage)
     {
-        try
-        {
-            _logger.LogInformation("Broadcasting task completed for {TaskId}", taskId);
+        _logger.LogInformation("Broadcasting task completed for {TaskId}", taskId);
 
-            await _hubContext.Clients
+        await ExecuteBroadcastAsync(
+            taskId,
+            () => _hubContext.Clients
                 .Group(taskId.ToString())
                 .SendAsync("TaskCompleted", new
                 {
@@ -106,11 +94,25 @@ public class TaskNotificationService : ITaskNotificationService
                     result,
                     errorMessage,
                     completedAt = DateTime.UtcNow
-                });
-        }
-        catch (Exception ex)
+                }),
+            "completion notification");
+    }
+
+    private async Task ExecuteBroadcastAsync(Guid taskId, Func<Task> broadcastAction, string operation)
+    {
+        try
         {
-            _logger.LogError(ex, "Error broadcasting task completed for {TaskId}", taskId);
+            await broadcastAction();
+        }
+        catch (HubException ex)
+        {
+            _logger.LogError(ex, "SignalR error while broadcasting {Operation} for {TaskId}", operation, taskId);
+            throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogWarning(ex, "Broadcast cancelled while sending {Operation} for {TaskId}", operation, taskId);
+            throw;
         }
     }
 }
