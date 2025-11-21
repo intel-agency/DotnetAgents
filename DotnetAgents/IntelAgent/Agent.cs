@@ -41,7 +41,6 @@ namespace IntelAgent
         {
             _logger.LogInformation("Starting task {TaskId}: {Goal}", task.Id, task.Goal);
 
-            task.StartedAt = DateTime.UtcNow;
             task.CurrentIteration = 0;
 
             // 1. Load or initialize state (from Redis)
@@ -55,6 +54,8 @@ namespace IntelAgent
                 history.Add(new Message("user", task.Goal));
             }
 
+            var loopExitedEarly = false;
+
             try
             {
                 for (int i = 0; i < MAX_ITERATIONS; i++) // Max 10 iterations
@@ -64,6 +65,7 @@ namespace IntelAgent
                     if (cancellationToken.IsCancellationRequested)
                     {
                         _logger.LogInformation("Task {TaskId} was cancelled.", task.Id);
+                        loopExitedEarly = true;
                         break; // Exit loop, worker will set status
                     }
 
@@ -102,6 +104,7 @@ namespace IntelAgent
                         // 4. FINISH
                         _logger.LogInformation("Task {TaskId} completed.", task.Id);
                         task.Result = llmResponse.Content;
+                        loopExitedEarly = true;
                         break; // Exit loop, worker will set status
                     }
 
@@ -113,6 +116,11 @@ namespace IntelAgent
                     {
                         await onProgress(task);
                     }
+                }
+
+                if (!loopExitedEarly)
+                {
+                    throw new InvalidOperationException($"Task exceeded maximum iterations ({MAX_ITERATIONS}).");
                 }
             }
             catch (Exception ex)

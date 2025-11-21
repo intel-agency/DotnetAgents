@@ -78,7 +78,7 @@ Completion of each phase requires all relevant checkboxes above plus merged PR w
 | ----- | -------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------- | ---------------- |
 | 1     | Database & model updates                     | ✅ Complete (verify migration applied in all environments)    | `feature/phase-1-db-models` *(historical)*                    | None             |
 | 2     | SignalR infrastructure (hub + notifications) | ✅ Complete                                                   | `feature/phase-2-signalr-api` (merged)                        | Phase 1          |
-| 3     | Agent + worker updates (broadcasting)        | 🟡 Ready to start                                             | `feature/phase-3-agent-worker`                                | Phases 1-2       |
+| 3     | Agent + worker updates (broadcasting)        | 🟡 In review (PR #6 on `feature/phase-3-agent-worker`)        | `feature/phase-3-agent-worker`                                | Phases 1-2       |
 | 4     | Expanded API endpoints                       | ❌ Incomplete – list/stats endpoints missing from API         | `feature/phase-4-api-endpoints` *(requires reimplementation)* | Phases 1-3       |
 | 5     | Web SignalR client service                   | 🟡 In progress (needs verification + console parity planning) | `feature/phase-5-web-signalr-client`                          | Phases 1-4       |
 | 6     | Tasks monitoring page (web)                  | ⏳ Not started                                                | `feature/phase-6-web-tasks-dashboard`                         | Phases 1-5, 4    |

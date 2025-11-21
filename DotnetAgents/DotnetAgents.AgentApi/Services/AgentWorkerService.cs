@@ -115,6 +115,15 @@ namespace DotnetAgents.AgentApi.Services
                     }
 
                     _logger.LogError(ex, "Error executing task {TaskId}", taskToRun?.Id);
+
+                    try
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        _logger.LogDebug("Delay interrupted because the stopping token was cancelled.");
+                    }
                 }
 
                 if (taskToRun == null)

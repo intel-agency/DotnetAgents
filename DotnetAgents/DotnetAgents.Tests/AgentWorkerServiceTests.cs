@@ -6,57 +6,40 @@ using DotnetAgents.Core.Interfaces;
 using DotnetAgents.Core.Models;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
 namespace DotnetAgents.Tests
 {
-    public class AgentWorkerServiceTests
+    public class AgentWorkerServiceTests : IDisposable
     {
         private readonly Mock<ILogger<AgentWorkerService>> _loggerMock;
-        private readonly Mock<IServiceProvider> _serviceProviderMock;
-        private readonly Mock<IServiceScopeFactory> _scopeFactoryMock;
-        private readonly Mock<IServiceScope> _scopeMock;
         private readonly Mock<ITaskNotificationService> _notificationServiceMock;
         private readonly Mock<IIntelAgent> _agentMock;
-        private readonly AgentDbContext _dbContext;
+        private readonly ServiceProvider _serviceProvider;
+        private readonly InMemoryDatabaseRoot _databaseRoot;
+        private readonly string _databaseName;
 
         public AgentWorkerServiceTests()
         {
             _loggerMock = new Mock<ILogger<AgentWorkerService>>();
-            _serviceProviderMock = new Mock<IServiceProvider>();
-            _scopeFactoryMock = new Mock<IServiceScopeFactory>();
-            _scopeMock = new Mock<IServiceScope>();
             _notificationServiceMock = new Mock<ITaskNotificationService>();
             _agentMock = new Mock<IIntelAgent>();
+            _databaseRoot = new InMemoryDatabaseRoot();
+            _databaseName = Guid.NewGuid().ToString();
 
-            // Setup InMemory DbContext
-            var options = new DbContextOptionsBuilder<AgentDbContext>()
-                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-                .Options;
-            _dbContext = new AgentDbContext(options);
+            var services = new ServiceCollection();
+            services.AddDbContext<AgentDbContext>(builder => builder.UseInMemoryDatabase(_databaseName, _databaseRoot));
+            services.AddScoped(_ => _notificationServiceMock.Object);
+            services.AddScoped(_ => _agentMock.Object);
 
-            // Setup Service Scope
-            _serviceProviderMock.Setup(sp => sp.GetService(typeof(IServiceScopeFactory)))
-                .Returns(_scopeFactoryMock.Object);
-            _scopeFactoryMock.Setup(sf => sf.CreateScope())
-                .Returns(_scopeMock.Object);
-            _scopeMock.Setup(s => s.ServiceProvider)
-                .Returns(_serviceProviderMock.Object);
-
-            // Setup Service Resolution
-            _serviceProviderMock.Setup(sp => sp.GetService(typeof(AgentDbContext)))
-                .Returns(_dbContext);
-            _serviceProviderMock.Setup(sp => sp.GetService(typeof(ITaskNotificationService)))
-                .Returns(_notificationServiceMock.Object);
-            _serviceProviderMock.Setup(sp => sp.GetService(typeof(IIntelAgent)))
-                .Returns(_agentMock.Object);
+            _serviceProvider = services.BuildServiceProvider();
         }
 
         [Fact]
@@ -64,32 +47,50 @@ namespace DotnetAgents.Tests
         {
             // Arrange
             var task = new AgentTask { Id = Guid.NewGuid(), Goal = "Test Task", Status = Status.Queued };
-            _dbContext.AgentTasks.Add(task);
-            await _dbContext.SaveChangesAsync();
+            await using (var scope = _serviceProvider.CreateAsyncScope())
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<AgentDbContext>();
+                dbContext.AgentTasks.Add(task);
+                await dbContext.SaveChangesAsync();
+            }
 
-            var cts = new CancellationTokenSource();
-            
+            using var cts = new CancellationTokenSource();
+            var taskPickedUp = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
             // Setup Agent to complete immediately
             _agentMock.Setup(a => a.ExecuteTaskAsync(It.IsAny<AgentTask>(), It.IsAny<Func<AgentTask, Task>>(), It.IsAny<CancellationToken>()))
-                .Callback<AgentTask, Func<AgentTask, Task>, CancellationToken>(async (t, cb, ct) => 
+                .Returns<AgentTask, Func<AgentTask, Task>, CancellationToken>(async (t, cb, ct) =>
                 {
+                    taskPickedUp.TrySetResult(true);
                     t.CurrentIteration = 1;
                     await cb(t); // Simulate progress
                     t.Result = "Success";
-                })
-                .Returns(Task.CompletedTask);
+                });
 
-            var service = new AgentWorkerService(_loggerMock.Object, _serviceProviderMock.Object);
+            var service = new AgentWorkerService(_loggerMock.Object, _serviceProvider);
 
             // Act
-            // Run for a short time then cancel
+            // Run until the agent picks up the task, then cancel
             var runTask = service.StartAsync(cts.Token);
-            await Task.Delay(500); // Give it time to pick up the task
+            await taskPickedUp.Task; // Wait until the background worker begins processing
             cts.Cancel();
-            try { await runTask; } catch (OperationCanceledException) { }
+            try
+            {
+                await runTask;
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected: the test cancels the service loop.
+            }
 
             // Assert
-            var dbTask = await _dbContext.AgentTasks.FindAsync(task.Id);
+            AgentTask? dbTask;
+            await using (var assertionScope = _serviceProvider.CreateAsyncScope())
+            {
+                var dbContext = assertionScope.ServiceProvider.GetRequiredService<AgentDbContext>();
+                dbTask = await dbContext.AgentTasks.FindAsync(task.Id);
+            }
+
             dbTask.Should().NotBeNull();
             dbTask!.Status.Should().Be(Status.Completed);
             dbTask.StartedAt.Should().NotBeNull();
@@ -99,6 +100,11 @@ namespace DotnetAgents.Tests
             _notificationServiceMock.Verify(n => n.NotifyTaskStarted(task.Id), Times.Once);
             _notificationServiceMock.Verify(n => n.NotifyTaskProgress(task.Id, 1, 10, It.IsAny<string>()), Times.Once);
             _notificationServiceMock.Verify(n => n.NotifyTaskCompleted(task.Id, "Success", null), Times.Once);
+        }
+
+        public void Dispose()
+        {
+            _serviceProvider.Dispose();
         }
     }
 }
