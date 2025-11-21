@@ -6,7 +6,7 @@
 	],
 	"settings": {
 		"dotrush.roslyn.projectOrSolutionFiles": [
-			"e:\\src\\github\\intel-agency\\DotnetAgents\\DotnetAgents\\DotnetAgents.slnx"
+			"DotnetAgents\\DotnetAgents.slnx"
 		]
 	}
 }
