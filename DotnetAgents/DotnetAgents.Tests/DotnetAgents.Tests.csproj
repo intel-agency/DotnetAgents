@@ -26,6 +26,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DotnetAgents.AppHost\DotnetAgents.AppHost.csproj" />
+    <ProjectReference Include="..\DotnetAgents.AgentApi\DotnetAgents.AgentApi.csproj" />
   </ItemGroup>
 
   <ItemGroup>
