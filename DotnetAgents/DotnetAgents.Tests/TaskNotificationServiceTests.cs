@@ -31,13 +31,13 @@ public class TaskNotificationServiceTests
 
         var invocation = Assert.Single(invocations);
         Assert.Equal("TaskStatusChanged", invocation.Method);
-        var payload = invocation.Payload;
-        Assert.Equal(task.Id, ReadProperty<Guid>(payload, "taskId"));
-        Assert.Equal(task.Status.ToString(), ReadProperty<string>(payload, "status"));
-        Assert.Equal(task.Result, ReadProperty<string>(payload, "result"));
-        Assert.Equal(task.ErrorMessage, ReadProperty<string>(payload, "errorMessage"));
-        Assert.Equal(task.CurrentIteration, ReadProperty<int>(payload, "currentIteration"));
-        Assert.Equal(task.MaxIterations, ReadProperty<int>(payload, "maxIterations"));
+        var payload = Assert.IsType<TaskStatusChangedPayload>(invocation.Payload);
+        Assert.Equal(task.Id, payload.TaskId);
+        Assert.Equal(task.Status.ToString(), payload.Status);
+        Assert.Equal(task.Result, payload.Result);
+        Assert.Equal(task.ErrorMessage, payload.ErrorMessage);
+        Assert.Equal(task.CurrentIteration, payload.CurrentIteration);
+        Assert.Equal(task.MaxIterations, payload.MaxIterations);
     }
 
     [Fact]
@@ -50,11 +50,11 @@ public class TaskNotificationServiceTests
 
         var invocation = Assert.Single(invocations);
         Assert.Equal("TaskProgress", invocation.Method);
-        var payload = invocation.Payload;
-        Assert.Equal(taskId, ReadProperty<Guid>(payload, "taskId"));
-        Assert.Equal(3, ReadProperty<int>(payload, "currentIteration"));
-        Assert.Equal(10, ReadProperty<int>(payload, "maxIterations"));
-        Assert.Equal("message", ReadProperty<string>(payload, "message"));
+        var payload = Assert.IsType<TaskProgressPayload>(invocation.Payload);
+        Assert.Equal(taskId, payload.TaskId);
+        Assert.Equal(3, payload.CurrentIteration);
+        Assert.Equal(10, payload.MaxIterations);
+        Assert.Equal("message", payload.Message);
     }
 
     [Fact]
@@ -67,8 +67,8 @@ public class TaskNotificationServiceTests
 
         var invocation = Assert.Single(invocations);
         Assert.Equal("TaskStarted", invocation.Method);
-        var payload = invocation.Payload;
-        Assert.Equal(taskId, ReadProperty<Guid>(payload, "taskId"));
+        var payload = Assert.IsType<TaskStartedPayload>(invocation.Payload);
+        Assert.Equal(taskId, payload.TaskId);
     }
 
     [Fact]
@@ -81,10 +81,10 @@ public class TaskNotificationServiceTests
 
         var invocation = Assert.Single(invocations);
         Assert.Equal("TaskCompleted", invocation.Method);
-        var payload = invocation.Payload;
-        Assert.Equal(taskId, ReadProperty<Guid>(payload, "taskId"));
-        Assert.Equal("done", ReadProperty<string>(payload, "result"));
-        Assert.Null(ReadProperty<string?>(payload, "errorMessage"));
+        var payload = Assert.IsType<TaskCompletedPayload>(invocation.Payload);
+        Assert.Equal(taskId, payload.TaskId);
+        Assert.Equal("done", payload.Result);
+        Assert.Null(payload.ErrorMessage);
     }
 
     private sealed record HubInvocation(string Method, object Payload);
@@ -111,18 +111,5 @@ public class TaskNotificationServiceTests
         var service = new TaskNotificationService(hubContext.Object, logger);
 
         return (service, invocations);
-    }
-
-    private static T? ReadProperty<T>(object payload, string name)
-    {
-        var property = payload.GetType()
-            .GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase);
-
-        if (property == null)
-        {
-            throw new InvalidOperationException($"Property '{name}' not found on type '{payload.GetType().FullName}'.");
-        }
-
-        return (T?)property.GetValue(payload);
     }
 }

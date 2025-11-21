@@ -29,19 +29,18 @@ public class TaskNotificationService : ITaskNotificationService
             task.Id,
             () => _hubContext.Clients
                 .Group(task.Id.ToString())
-                .SendAsync("TaskStatusChanged", new
-                {
-                    taskId = task.Id,
-                    status = task.Status.ToString(),
-                    result = task.Result,
-                    errorMessage = task.ErrorMessage,
-                    currentIteration = task.CurrentIteration,
-                    maxIterations = task.MaxIterations,
-                    startedAt = task.StartedAt,
-                    completedAt = task.CompletedAt,
-                    duration = task.Duration?.ToString(),
-                    elapsed = task.Elapsed?.ToString()
-                }),
+                .SendAsync("TaskStatusChanged", new TaskStatusChangedPayload(
+                    task.Id,
+                    task.Status.ToString(),
+                    task.Result,
+                    task.ErrorMessage,
+                    task.CurrentIteration,
+                    task.MaxIterations,
+                    task.StartedAt,
+                    task.CompletedAt,
+                    task.Duration?.TotalSeconds,
+                    task.Elapsed?.TotalSeconds
+                )),
             "status change");
     }
 
@@ -53,14 +52,13 @@ public class TaskNotificationService : ITaskNotificationService
             taskId,
             () => _hubContext.Clients
                 .Group(taskId.ToString())
-                .SendAsync("TaskProgress", new
-                {
+                .SendAsync("TaskProgress", new TaskProgressPayload(
                     taskId,
                     currentIteration,
                     maxIterations,
                     message,
-                    timestamp = DateTime.UtcNow
-                }),
+                    DateTime.UtcNow
+                )),
             "progress update");
     }
 
@@ -72,11 +70,10 @@ public class TaskNotificationService : ITaskNotificationService
             taskId,
             () => _hubContext.Clients
                 .Group(taskId.ToString())
-                .SendAsync("TaskStarted", new
-                {
+                .SendAsync("TaskStarted", new TaskStartedPayload(
                     taskId,
-                    startedAt = DateTime.UtcNow
-                }),
+                    DateTime.UtcNow
+                )),
             "start notification");
     }
 
@@ -88,13 +85,12 @@ public class TaskNotificationService : ITaskNotificationService
             taskId,
             () => _hubContext.Clients
                 .Group(taskId.ToString())
-                .SendAsync("TaskCompleted", new
-                {
+                .SendAsync("TaskCompleted", new TaskCompletedPayload(
                     taskId,
                     result,
                     errorMessage,
-                    completedAt = DateTime.UtcNow
-                }),
+                    DateTime.UtcNow
+                )),
             "completion notification");
     }
 
@@ -107,12 +103,12 @@ public class TaskNotificationService : ITaskNotificationService
         catch (HubException ex)
         {
             _logger.LogError(ex, "SignalR error while broadcasting {Operation} for {TaskId}", operation, taskId);
-            throw;
+            // Exception swallowed: notification failures should not break the calling code.
         }
         catch (OperationCanceledException ex)
         {
             _logger.LogWarning(ex, "Broadcast cancelled while sending {Operation} for {TaskId}", operation, taskId);
-            throw;
+            // Exception swallowed: notification failures should not break the calling code.
         }
     }
 }
