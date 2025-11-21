@@ -1,18 +1,24 @@
-## PR Review Summary
+## PR #6 Review Summary
 
-All review threads have been addressed and resolved.
+All 13 review threads now have a documented reply that references commit `1696ed5` and have been resolved via `resolveReviewThread`.
 
-| Thread ID | File | Resolution | Commit |
-|-----------|------|------------|--------|
-| `PRRT_kwDOQNh2DM5i5zaj` | `DotnetAgents.code-workspace` | Fixed (relative path) | `1d5458c` |
-| `PRRT_kwDOQNh2DM5i50-I` | `TaskHubTests.cs` | Fixed (reflection removed) | `ec579f7` |
-| `PRRT_kwDOQNh2DM5i50_C` | `Phase1-4_Audit.md` | Fixed (markdown links) | `a78bc04` |
-| `PRRT_kwDOQNh2DM5i50_b` | `WebTests.cs` | Fixed (unused using) | `d2880b5` |
-| `PRRT_kwDOQNh2DM5i-KA5` | `TaskNotificationService.cs` | Fixed (DTOs introduced) | `a46ba02` |
-| `PRRT_kwDOQNh2DM5i-K-g` | `TaskHubTests.cs` | Fixed (reflection removed) | `ec579f7` |
-| `PRRT_kwDOQNh2DM5i-K-1` | `TaskNotificationService.cs` | Fixed (swallow exceptions) | `a46ba02` |
-| `PRRT_kwDOQNh2DM5i-K_2` | `WebTests.cs` | Verified (token correct) | `d2880b5` |
+| Thread ID | Scope | Outcome |
+|-----------|-------|---------|
+| `PRRT_kwDOQNh2DM5jAKo8` | `DotnetAgents.AgentApi/Services/AgentWorkerService.cs` | Added a five-second, cancellation-aware delay after logged exceptions so the worker cannot spin in a tight loop. |
+| `PRRT_kwDOQNh2DM5jAKpH` | `IntelAgent/Agent.cs` | Agent now throws when `MAX_ITERATIONS` is exhausted, allowing the worker to mark the task as failed. |
+| `PRRT_kwDOQNh2DM5jAKpQ` | `DotnetAgents.Tests/AgentWorkerServiceTests.cs` | Tests now use a real `ServiceCollection` and scoped provider to mimic DI lifetimes. |
+| `PRRT_kwDOQNh2DM5jAKpW` | `DotnetAgents.Tests/AgentWorkerServiceTests.cs` | Replaced timing sleeps with a `TaskCompletionSource` signal to eliminate flakiness. |
+| `PRRT_kwDOQNh2DM5jALyU` | `DotnetAgents.Tests/AgentWorkerServiceTests.cs` | DI scopes are created via the framework scope factory instead of mocks, matching production behavior. |
+| `PRRT_kwDOQNh2DM5jALym` | `DotnetAgents.Tests/AgentWorkerServiceTests.cs` | Moq setup now uses `Returns<…>(async …)` so async callbacks are awaited. |
+| `PRRT_kwDOQNh2DM5jALy2` | `docs/LLM_Response_Routing_Implementation_Plan.md` | Phase 3 status updated to “In review (PR #6)” to reflect reality. |
+| `PRRT_kwDOQNh2DM5jALzA` | `docs/Phase1-4_Audit.md` | Clarified that the agent only updates progress fields while the worker owns lifecycle timestamps. |
+| `PRRT_kwDOQNh2DM5jALzP` | `docs/Phase1-4_Audit.md` | Phase 3 table entry now repeats the corrected ownership description. |
+| `PRRT_kwDOQNh2DM5jALzW` | `IntelAgent/Agent.cs` | Removed the duplicate `StartedAt` assignment; worker is sole lifecycle owner. |
+| `PRRT_kwDOQNh2DM5jALzg` | `DotnetAgents.Tests/AgentWorkerServiceTests.cs` | Using the real provider ensures `GetRequiredService<T>` behaves exactly like production. |
+| `PRRT_kwDOQNh2DM5jALzm` | `DotnetAgents.Tests/AgentWorkerServiceTests.cs` | Wrapped the `CancellationTokenSource` in a `using` block to dispose deterministically. |
+| `PRRT_kwDOQNh2DM5jALzu` | `DotnetAgents.Tests/AgentWorkerServiceTests.cs` | Added an explicit `try { await runTask; } catch (OperationCanceledException)` with a clarifying comment. |
 
 Verification artifacts:
-- `.pr-thread-snapshot-final.json` (attached to run report)
+- `.pr-thread-snapshot.json` (latest GraphQL export)
 - `pr-unresolved-threads.json` (empty)
+- `pr-review-threads-summary.md` (detailed record of each thread)
