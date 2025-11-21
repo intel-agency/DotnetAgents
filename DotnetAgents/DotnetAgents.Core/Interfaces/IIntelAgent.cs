@@ -16,8 +16,9 @@ namespace DotnetAgents.Core.Interfaces
         /// This method will be called by the AgentWorkerService.
         /// </summary>
         /// <param name="task">The task to execute.</param>
+        /// <param name="onProgress">A callback to invoke when the agent makes progress (e.g. finishes an iteration).</param>
         /// <param name="cancellationToken">A token to stop the loop.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        Task ExecuteTaskAsync(AgentTask task, CancellationToken cancellationToken);
+        Task ExecuteTaskAsync(AgentTask task, Func<AgentTask, Task>? onProgress, CancellationToken cancellationToken);
     }
 }

@@ -17,11 +17,11 @@
 - [x] Update docs (`Phase2_*` + audit) with evidence of implemented SignalR infrastructure.
 
 #### Phase 3 – Agent & Worker Updates (branch: `feature/phase-3-agent-worker`)
-- [ ] Update `IntelAgent.Agent` to set `StartedAt`, increment `CurrentIteration`, and populate `Result`/`ErrorMessage`.
-- [ ] Extend `AgentWorkerService` to track `LastUpdatedAt`, `UpdateCount`, `CompletedAt`, and inject `ITaskNotificationService`.
-- [ ] Emit notifications for queued→running, progress loops, completion/failure.
-- [ ] Add automated tests (unit or integration) for worker updates + notification calls.
-- [ ] Document changes and update audit status once verified.
+- [x] Update `IntelAgent.Agent` to set `StartedAt`, increment `CurrentIteration`, and populate `Result`/`ErrorMessage`.
+- [x] Extend `AgentWorkerService` to track `LastUpdatedAt`, `UpdateCount`, `CompletedAt`, and inject `ITaskNotificationService`.
+- [x] Emit notifications for queued→running, progress loops, completion/failure.
+- [x] Add automated tests (unit or integration) for worker updates + notification calls.
+- [x] Document changes and update audit status once verified.
 
 #### Phase 4 – API Endpoints (branch: `feature/phase-4-api-endpoints`)
 - [ ] Implement `GET /api/tasks` with pagination/filter DTOs; include new fields.
@@ -51,9 +51,9 @@
 - [ ] Automated test proving subscribe/unsubscribe behavior.
 
 ### Phase 3 Re-baseline
-- [ ] `AgentTask` rows show `StartedAt`, `CompletedAt`, `CurrentIteration`, `Result/ErrorMessage` after a run.
-- [ ] Worker logs show notification broadcasts for start, progress, completion, failure.
-- [ ] Regression test (unit/integration) updated to cover new persistence logic.
+- [x] `AgentTask` rows show `StartedAt`, `CompletedAt`, `CurrentIteration`, `Result/ErrorMessage` after a run.
+- [x] Worker logs show notification broadcasts for start, progress, completion, failure.
+- [x] Regression test (unit/integration) updated to cover new persistence logic.
 
 ### Phase 4 Re-baseline
 - [ ] `GET /api/tasks` returns paginated payload with new fields.
@@ -74,16 +74,16 @@ Completion of each phase requires all relevant checkboxes above plus merged PR w
 
 ## 1. Current Phase Status & Readiness Snapshot
 
-| Phase | Description | Status (2025-11-19) | Branch to Use | Key Dependencies |
-|-------|-------------|---------------------|----------------|------------------|
-| 1 | Database & model updates | ✅ Complete (verify migration applied in all environments) | `feature/phase-1-db-models` *(historical)* | None |
-| 2 | SignalR infrastructure (hub + notifications) | 🟡 Staged – SignalR hub, service, AppHost wiring, and tests ready for PR | `feature/phase-2-signalr-api` *(finalize commit & PR)* | Phase 1 |
-| 3 | Agent + worker updates (broadcasting) | ❌ Incomplete – Agent/worker never populate new task fields or broadcast | `feature/phase-3-agent-worker` *(requires reimplementation)* | Phases 1-2 |
-| 4 | Expanded API endpoints | ❌ Incomplete – list/stats endpoints missing from API | `feature/phase-4-api-endpoints` *(requires reimplementation)* | Phases 1-3 |
-| 5 | Web SignalR client service | 🟡 In progress (needs verification + console parity planning) | `feature/phase-5-web-signalr-client` | Phases 1-4 |
-| 6 | Tasks monitoring page (web) | ⏳ Not started | `feature/phase-6-web-tasks-dashboard` | Phases 1-5, 4 |
-| 7 | Chat UI upgrades | ✅ Complete *(per docs, re-validate after Phase 5)* | `feature/phase-7-chat-ui` | Phases 1-5 |
-| 8 | Database insights & instrumentation | ✅ Complete *(per docs; confirm rollout in target envs)* | `feature/phase-8-db-insights` | Phases 1-4 |
+| Phase | Description                                  | Status (2025-11-19)                                          | Branch to Use                                                 | Key Dependencies |
+| ----- | -------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------- | ---------------- |
+| 1     | Database & model updates                     | ✅ Complete (verify migration applied in all environments)    | `feature/phase-1-db-models` *(historical)*                    | None             |
+| 2     | SignalR infrastructure (hub + notifications) | ✅ Complete                                                   | `feature/phase-2-signalr-api` (merged)                        | Phase 1          |
+| 3     | Agent + worker updates (broadcasting)        | 🟡 In review (PR #6 on `feature/phase-3-agent-worker`)        | `feature/phase-3-agent-worker`                                | Phases 1-2       |
+| 4     | Expanded API endpoints                       | ❌ Incomplete – list/stats endpoints missing from API         | `feature/phase-4-api-endpoints` *(requires reimplementation)* | Phases 1-3       |
+| 5     | Web SignalR client service                   | 🟡 In progress (needs verification + console parity planning) | `feature/phase-5-web-signalr-client`                          | Phases 1-4       |
+| 6     | Tasks monitoring page (web)                  | ⏳ Not started                                                | `feature/phase-6-web-tasks-dashboard`                         | Phases 1-5, 4    |
+| 7     | Chat UI upgrades                             | ✅ Complete *(per docs, re-validate after Phase 5)*           | `feature/phase-7-chat-ui`                                     | Phases 1-5       |
+| 8     | Database insights & instrumentation          | ✅ Complete *(per docs; confirm rollout in target envs)*      | `feature/phase-8-db-insights`                                 | Phases 1-4       |
 
 > **Console UI parity:** not covered by historical phases. Each future branch must include a “Console parity” checklist item so both frontends stay in sync once routing infrastructure is live.
 >
@@ -205,12 +205,12 @@ Because the original walkthroughs only reference the Blazor UI, each upcoming ph
 
 ## 6. Risk Register & Mitigations
 
-| Risk | Phase(s) | Impact | Mitigation |
-|------|----------|--------|------------|
-| Hub contract drift between API, web, console | 5-7 | High | Centralize DTOs, add integration test hitting `/taskHub` with TestServer + client library. |
-| Console UI blocking Aspire startup (due to SignalR connection failures) | 5-7 | Medium | Lazy-start console hub connection and retry with exponential backoff mirroring web logic. |
-| Database insight overhead | 8 | Medium | Feature flag instrumentation; monitor `UpdateCount` deltas before/after enabling. |
-| Branch overlap / long-lived PRs | All | Medium | Enforce sequential merges (Phase N must merge before Phase N+1 starts) and keep branches rebased daily. |
+| Risk                                                                    | Phase(s) | Impact | Mitigation                                                                                              |
+| ----------------------------------------------------------------------- | -------- | ------ | ------------------------------------------------------------------------------------------------------- |
+| Hub contract drift between API, web, console                            | 5-7      | High   | Centralize DTOs, add integration test hitting `/taskHub` with TestServer + client library.              |
+| Console UI blocking Aspire startup (due to SignalR connection failures) | 5-7      | Medium | Lazy-start console hub connection and retry with exponential backoff mirroring web logic.               |
+| Database insight overhead                                               | 8        | Medium | Feature flag instrumentation; monitor `UpdateCount` deltas before/after enabling.                       |
+| Branch overlap / long-lived PRs                                         | All      | Medium | Enforce sequential merges (Phase N must merge before Phase N+1 starts) and keep branches rebased daily. |
 
 ---
 
