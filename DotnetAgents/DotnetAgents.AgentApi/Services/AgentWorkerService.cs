@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DotnetAgents.Core.Models;
 using DotnetAgents.AgentApi.Data;
+using DotnetAgents.AgentApi.Interfaces;
 
 namespace DotnetAgents.AgentApi.Services
 {
@@ -42,6 +43,7 @@ namespace DotnetAgents.AgentApi.Services
                     using (var scope = _serviceProvider.CreateScope())
                     {
                         var dbContext = scope.ServiceProvider.GetRequiredService<AgentDbContext>();
+                        var notificationService = scope.ServiceProvider.GetRequiredService<ITaskNotificationService>();
 
                         // Find the next queued task
                         taskToRun = await dbContext.AgentTasks
@@ -53,7 +55,11 @@ namespace DotnetAgents.AgentApi.Services
 
                             // Use our strongly-typed enum
                             taskToRun.Status = Status.Running;
+                            taskToRun.StartedAt = DateTime.UtcNow;
                             await dbContext.SaveChangesAsync(stoppingToken);
+
+                            // Notify Started
+                            await notificationService.NotifyTaskStarted(taskToRun.Id);
 
                             // Resolve the agent *within the scope*
                             var agent = scope.ServiceProvider.GetRequiredService<IIntelAgent>();
@@ -61,16 +67,35 @@ namespace DotnetAgents.AgentApi.Services
                             try
                             {
                                 // Execute the task.
-                                await agent.ExecuteTaskAsync(taskToRun, stoppingToken);
+                                await agent.ExecuteTaskAsync(taskToRun, async (t) =>
+                                {
+                                    // Progress Callback
+                                    t.LastUpdatedAt = DateTime.UtcNow;
+                                    t.UpdateCount++;
+
+                                    // Save to DB
+                                    await dbContext.SaveChangesAsync(stoppingToken);
+
+                                    // Notify Progress
+                                    await notificationService.NotifyTaskProgress(t.Id, t.CurrentIteration, t.MaxIterations, $"Iteration {t.CurrentIteration} completed.");
+                                }, stoppingToken);
 
                                 // If it returns without error, mark as completed
                                 taskToRun.Status = Status.Completed;
+                                taskToRun.CompletedAt = DateTime.UtcNow;
+
+                                // Notify Completed
+                                await notificationService.NotifyTaskCompleted(taskToRun.Id, taskToRun.Result, null);
                             }
                             catch (Exception agentEx)
                             {
                                 // Agent loop failed, mark as failed
                                 _logger.LogError(agentEx, "Task {TaskId} failed during execution.", taskToRun.Id);
                                 taskToRun.Status = Status.Failed;
+                                taskToRun.CompletedAt = DateTime.UtcNow;
+
+                                // Notify Failed
+                                await notificationService.NotifyTaskCompleted(taskToRun.Id, null, taskToRun.ErrorMessage ?? agentEx.Message);
                             }
                             finally
                             {
@@ -89,7 +114,7 @@ namespace DotnetAgents.AgentApi.Services
                         break;
                     }
 
-                    _logger.LogError(ex, "Error executing task {TaskId}", taskToRun?.Id);                  
+                    _logger.LogError(ex, "Error executing task {TaskId}", taskToRun?.Id);
                 }
 
                 if (taskToRun == null)

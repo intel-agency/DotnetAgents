@@ -37,9 +37,12 @@ namespace IntelAgent
             _config = config;
         }
 
-        public async Task ExecuteTaskAsync(AgentTask task, CancellationToken cancellationToken)
+        public async Task ExecuteTaskAsync(AgentTask task, Func<AgentTask, Task>? onProgress, CancellationToken cancellationToken)
         {
             _logger.LogInformation("Starting task {TaskId}: {Goal}", task.Id, task.Goal);
+
+            task.StartedAt = DateTime.UtcNow;
+            task.CurrentIteration = 0;
 
             // 1. Load or initialize state (from Redis)
             var history = await _stateManager.LoadHistoryAsync(task.Id);
@@ -56,6 +59,8 @@ namespace IntelAgent
             {
                 for (int i = 0; i < MAX_ITERATIONS; i++) // Max 10 iterations
                 {
+                    task.CurrentIteration = i + 1;
+
                     if (cancellationToken.IsCancellationRequested)
                     {
                         _logger.LogInformation("Task {TaskId} was cancelled.", task.Id);
@@ -65,7 +70,7 @@ namespace IntelAgent
                     // 2. THINK
                     // We will add intermediate (Redis/SignalR) status updates here later
                     var toolSchemas = _toolDispatcher.GetAllToolSchemas();
-                    
+
                     // DEBUGGING: Log the tool schemas being sent
                     _logger.LogInformation("Tool schemas count: {Count}", toolSchemas?.Count ?? 0);
                     if (toolSchemas != null)
@@ -76,7 +81,7 @@ namespace IntelAgent
                         }
                     }
                     // DEBUGGING END
-                    
+
                     var llmResponse = await _llmClient.GetCompletionAsync(history, toolSchemas);
                     history.Add(new Message("assistant", llmResponse.Content)); // Add LLM thought
 
@@ -96,16 +101,24 @@ namespace IntelAgent
                     {
                         // 4. FINISH
                         _logger.LogInformation("Task {TaskId} completed.", task.Id);
+                        task.Result = llmResponse.Content;
                         break; // Exit loop, worker will set status
                     }
 
                     // 5. Save state after each loop (to Redis)
                     await _stateManager.SaveHistoryAsync(task.Id, history);
+
+                    // Notify progress
+                    if (onProgress != null)
+                    {
+                        await onProgress(task);
+                    }
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Task {TaskId} failed.", task.Id);
+                task.ErrorMessage = ex.Message;
                 // Re-throw to let the worker service handle the "Failed" status
                 throw;
             }

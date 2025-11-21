@@ -17,11 +17,11 @@
 - [x] Update docs (`Phase2_*` + audit) with evidence of implemented SignalR infrastructure.
 
 #### Phase 3 – Agent & Worker Updates (branch: `feature/phase-3-agent-worker`)
-- [ ] Update `IntelAgent.Agent` to set `StartedAt`, increment `CurrentIteration`, and populate `Result`/`ErrorMessage`.
-- [ ] Extend `AgentWorkerService` to track `LastUpdatedAt`, `UpdateCount`, `CompletedAt`, and inject `ITaskNotificationService`.
-- [ ] Emit notifications for queued→running, progress loops, completion/failure.
-- [ ] Add automated tests (unit or integration) for worker updates + notification calls.
-- [ ] Document changes and update audit status once verified.
+- [x] Update `IntelAgent.Agent` to set `StartedAt`, increment `CurrentIteration`, and populate `Result`/`ErrorMessage`.
+- [x] Extend `AgentWorkerService` to track `LastUpdatedAt`, `UpdateCount`, `CompletedAt`, and inject `ITaskNotificationService`.
+- [x] Emit notifications for queued→running, progress loops, completion/failure.
+- [x] Add automated tests (unit or integration) for worker updates + notification calls.
+- [x] Document changes and update audit status once verified.
 
 #### Phase 4 – API Endpoints (branch: `feature/phase-4-api-endpoints`)
 - [ ] Implement `GET /api/tasks` with pagination/filter DTOs; include new fields.
@@ -51,9 +51,9 @@
 - [ ] Automated test proving subscribe/unsubscribe behavior.
 
 ### Phase 3 Re-baseline
-- [ ] `AgentTask` rows show `StartedAt`, `CompletedAt`, `CurrentIteration`, `Result/ErrorMessage` after a run.
-- [ ] Worker logs show notification broadcasts for start, progress, completion, failure.
-- [ ] Regression test (unit/integration) updated to cover new persistence logic.
+- [x] `AgentTask` rows show `StartedAt`, `CompletedAt`, `CurrentIteration`, `Result/ErrorMessage` after a run.
+- [x] Worker logs show notification broadcasts for start, progress, completion, failure.
+- [x] Regression test (unit/integration) updated to cover new persistence logic.
 
 ### Phase 4 Re-baseline
 - [ ] `GET /api/tasks` returns paginated payload with new fields.
