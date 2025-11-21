@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Xunit;
-using Xunit.Sdk;
 
 namespace DotnetAgents.Tests;
 
