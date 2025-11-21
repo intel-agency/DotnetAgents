@@ -28,7 +28,7 @@
 
 Select and read based on which client you are.
 
-### Copilot Rules
+### Copilot Rules (Use for Cursor, Windsurf, or any other agents/models/clients that do not have their own rules)
 - `.github/copilot-instructions.md` (shell detect, RAW URLs, automation-first, web-fetch disabled → use `Invoke-WebRequest`/`curl`)
 
 ### Gemini rules
