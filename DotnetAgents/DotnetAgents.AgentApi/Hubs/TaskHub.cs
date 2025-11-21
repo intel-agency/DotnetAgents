@@ -42,7 +42,15 @@ public class TaskHub : Hub
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        _logger.LogInformation("Client disconnected: {ConnectionId}", Context.ConnectionId);
+        if (exception is not null)
+        {
+            _logger.LogWarning(exception, "Client {ConnectionId} disconnected with an error.", Context.ConnectionId);
+        }
+        else
+        {
+            _logger.LogInformation("Client disconnected: {ConnectionId}", Context.ConnectionId);
+        }
+
         await base.OnDisconnectedAsync(exception);
     }
 }

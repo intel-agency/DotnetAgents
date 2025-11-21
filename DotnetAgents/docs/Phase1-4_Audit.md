@@ -9,7 +9,7 @@
 | Phase | Scope | Status | Evidence / Gaps |
 |-------|-------|--------|-----------------|
 | 1 | Database & model updates | ✅ **Complete** | `AgentTask` includes result/progress/timestamp fields and EF migration adds the columns.@DotnetAgents.Core/Models/AgentTask.cs#11-38 @DotnetAgents.AgentApi/Migrations/20251115183746_AddTaskTrackingFields.cs#12-110 |
-| 2 | SignalR infrastructure (TaskHub, notification service, API wiring) | ✅ **Complete** | `TaskHub` SignalR hub, `ITaskNotificationService`, and `TaskNotificationService` are implemented and registered; `/taskHub` is mapped in `Program.cs`, and automated tests cover hub subscriptions + notification payloads.@DotnetAgents.AgentApi/Hubs/TaskHub.cs#1-41 @DotnetAgents.AgentApi/Interfaces/ITaskNotificationService.cs#1-23 @DotnetAgents.AgentApi/Services/TaskNotificationService.cs#1-93 @DotnetAgents.AgentApi/Program.cs#33-121 @DotnetAgents.Tests/TaskHubTests.cs#1-66 @DotnetAgents.Tests/TaskNotificationServiceTests.cs#1-123 |
+| 2 | SignalR infrastructure (TaskHub, notification service, API wiring) | ✅ **Complete** | `TaskHub` SignalR hub, `ITaskNotificationService`, and `TaskNotificationService` are implemented and registered; `/taskHub` is mapped in `Program.cs`, and automated tests cover hub subscriptions + notification payloads.@DotnetAgents.AgentApi/Hubs/TaskHub.cs#1-48 @DotnetAgents.AgentApi/Interfaces/ITaskNotificationService.cs#1-29 @DotnetAgents.AgentApi/Services/TaskNotificationService.cs#1-118 @DotnetAgents.AgentApi/Program.cs#33-121 @DotnetAgents.Tests/TaskHubTests.cs#1-65 @DotnetAgents.Tests/TaskNotificationServiceTests.cs#1-122 |
 | 3 | Agent & worker updates (timestamps, iteration tracking, SignalR broadcasts) | ❌ **Incomplete** | `Agent.ExecuteTaskAsync` never sets `StartedAt`, `CurrentIteration`, `Result`, or `ErrorMessage`; worker service does not maintain timestamps/update counts nor inject any notification service, so broadcasts cannot occur.@IntelAgent/Agent.cs#40-117 @DotnetAgents.AgentApi/Services/AgentWorkerService.cs#31-100 |
 | 4 | API endpoints for tasks/stats/details | ❌ **Incomplete** | API exposes only POST `/api/agent/prompt`, POST `/api/tasks`, and GET `/api/tasks/{id}`; there is no paginated list endpoint or stats endpoint implemented in `Program.cs`.@DotnetAgents.AgentApi/Program.cs#115-210 |
 
@@ -23,10 +23,10 @@
 - **Conclusion:** Phase 1 requirements are implemented in code.
 
 ### Phase 2 – SignalR Infrastructure
-- `TaskHub` now resides in `DotnetAgents.AgentApi/Hubs/TaskHub.cs` with subscribe/unsubscribe/group logging plus connection lifecycle instrumentation.@DotnetAgents.AgentApi/Hubs/TaskHub.cs#1-41
-- `ITaskNotificationService` and `TaskNotificationService` are implemented and injected as singletons, broadcasting task lifecycle events through SignalR groups.@DotnetAgents.AgentApi/Interfaces/ITaskNotificationService.cs#1-23 @DotnetAgents.AgentApi/Services/TaskNotificationService.cs#1-93
+- `TaskHub` now resides in `DotnetAgents.AgentApi/Hubs/TaskHub.cs` with subscribe/unsubscribe/group logging plus connection lifecycle instrumentation.@DotnetAgents.AgentApi/Hubs/TaskHub.cs#1-48
+- `ITaskNotificationService` and `TaskNotificationService` are implemented and injected as singletons, broadcasting task lifecycle events through SignalR groups.@DotnetAgents.AgentApi/Interfaces/ITaskNotificationService.cs#1-29 @DotnetAgents.AgentApi/Services/TaskNotificationService.cs#1-118
 - `Program.cs` registers SignalR (`AddSignalR`, singleton notification service) and maps `/taskHub` so clients can connect.@DotnetAgents.AgentApi/Program.cs#33-121
-- Automated tests validate hub group membership changes and notification payload serialization, ensuring regressions are caught in CI.@DotnetAgents.Tests/TaskHubTests.cs#1-66 @DotnetAgents.Tests/TaskNotificationServiceTests.cs#1-123
+- Automated tests validate hub group membership changes and notification payload serialization, ensuring regressions are caught in CI.@DotnetAgents.Tests/TaskHubTests.cs#1-65 @DotnetAgents.Tests/TaskNotificationServiceTests.cs#1-122
 - **Conclusion:** Phase 2 is now complete; real-time infrastructure exists in code with unit-test coverage.
 
 ### Phase 3 – Agent & Worker Updates
@@ -42,8 +42,7 @@
 ---
 
 ## Next Recommendations
-1. **Phase 2:** Implement `TaskHub` and `ITaskNotificationService`, register SignalR services, and map `/taskHub` before progressing to higher phases.
-2. **Phase 3:** Update `Agent` and `AgentWorkerService` to maintain all new fields and invoke the notification service for status/progress/completion events.
-3. **Phase 4:** Add the list and stats endpoints (with pagination/filtering) and expand the task-detail endpoint to return the new fields so downstream UIs can consume them.
+1. **Phase 3:** Update `Agent` and `AgentWorkerService` to maintain all new fields and invoke the notification service for status/progress/completion events.
+2. **Phase 4:** Add the list and stats endpoints (with pagination/filtering) and expand the task-detail endpoint to return the new fields so downstream UIs can consume them.
 
 These remediation items should precede any further work (e.g., Phase 5) to ensure the foundation is complete and verifiable.

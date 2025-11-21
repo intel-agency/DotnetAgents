@@ -115,8 +115,14 @@ public class TaskNotificationServiceTests
 
     private static T? ReadProperty<T>(object payload, string name)
     {
-        return (T?)payload.GetType()
-            .GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase)?
-            .GetValue(payload);
+        var property = payload.GetType()
+            .GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase);
+
+        if (property == null)
+        {
+            throw new InvalidOperationException($"Property '{name}' not found on type '{payload.GetType().FullName}'.");
+        }
+
+        return (T?)property.GetValue(payload);
     }
 }
