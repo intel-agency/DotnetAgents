@@ -2,7 +2,6 @@ using DotnetAgents.AgentApi.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Moq;
-using System.Reflection;
 
 namespace DotnetAgents.Tests;
 
@@ -54,12 +53,7 @@ public class TaskHubTests
 
     private static void InitializeHub(TaskHub hub, HubCallerContext context, IGroupManager groups)
     {
-        var hubType = typeof(Hub);
-
-        hubType.GetProperty("Context", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!
-            .SetValue(hub, context);
-
-        hubType.GetProperty("Groups", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!
-            .SetValue(hub, groups);
+        hub.Context = context;
+        hub.Groups = groups;
     }
 }
