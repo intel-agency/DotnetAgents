@@ -22,6 +22,7 @@ namespace DotnetAgents.AgentApi.Services
     {
         private readonly ILogger<AgentWorkerService> _logger;
         private readonly IServiceProvider _serviceProvider;
+        private static readonly TimeSpan ErrorRetryDelay = TimeSpan.FromSeconds(5);
 
         public AgentWorkerService(ILogger<AgentWorkerService> logger, IServiceProvider serviceProvider)
         {
@@ -118,7 +119,7 @@ namespace DotnetAgents.AgentApi.Services
 
                     try
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                        await Task.Delay(ErrorRetryDelay, stoppingToken);
                     }
                     catch (OperationCanceledException)
                     {

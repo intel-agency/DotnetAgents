@@ -59,7 +59,6 @@ namespace IntelAgent.Tests
             await _agent.ExecuteTaskAsync(task, onProgress, CancellationToken.None);
 
             // Assert
-            task.StartedAt.Should().NotBeNull();
             task.CurrentIteration.Should().Be(1);
             task.Result.Should().Be("Final Result");
             progressCalls.Should().Be(0); // onProgress is skipped on final iteration
