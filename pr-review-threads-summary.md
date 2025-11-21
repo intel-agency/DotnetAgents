@@ -21,5 +21,5 @@
 | PRRT_kwDOQNh2DM5jALzm | Undisposed CTS in test                             | Wrapped the cancellation token source in a `using` statement to dispose it deterministically.                                                                                             |
 | PRRT_kwDOQNh2DM5jALzu | Empty catch swallowing cancellation                | Added an explicit `try/await/catch (OperationCanceledException)` block with a comment explaining the expected cancellation path.                                                          |
 | PRRT_kwDOQNh2DM5jEGbt | Agent test asserting worker-owned StartedAt        | Removed the `task.StartedAt` assertion so the unit test now focuses solely on Agent responsibilities (iterations/result/progress) and no longer expects the worker-managed timestamp.     |
-| PRRT_kwDOQNh2DM5jEGb1 | Magic number error delay in AgentWorkerService     | Added a named `ErrorRetryDelay` TimeSpan constant and updated the catch block to await that value, eliminating the magic number and centralizing future tuning in one place.               |
+| PRRT_kwDOQNh2DM5jEGb1 | Magic number error delay in AgentWorkerService     | Added a named `ErrorRetryDelay` TimeSpan constant and updated the catch block to await that value, eliminating the magic number and centralizing future tuning in one place.              |
 
