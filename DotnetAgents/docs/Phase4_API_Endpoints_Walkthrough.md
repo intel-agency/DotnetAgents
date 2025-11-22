@@ -155,11 +155,11 @@ app.MapGet("/api/tasks/{id:guid}", async (
 
 ### REST endpoints
 
-| Endpoint | Method | Purpose | Response |
-| --- | --- | --- | --- |
-| `/api/tasks` | GET | Paginated task listing with filters | `PaginatedAgentTasksResponse` |
-| `/api/tasks/stats` | GET | Aggregate counts, success rate, DB metrics | `AgentTaskStatsDto` |
-| `/api/tasks/{id}` | GET | Enriched single-task payload | `AgentTaskDto` |
+| Endpoint           | Method | Purpose                                    | Response                      |
+| ------------------ | ------ | ------------------------------------------ | ----------------------------- |
+| `/api/tasks`       | GET    | Paginated task listing with filters        | `PaginatedAgentTasksResponse` |
+| `/api/tasks/stats` | GET    | Aggregate counts, success rate, DB metrics | `AgentTaskStatsDto`           |
+| `/api/tasks/{id}`  | GET    | Enriched single-task payload               | `AgentTaskDto`                |
 
 ### Supporting assets
 
@@ -170,12 +170,12 @@ app.MapGet("/api/tasks/{id:guid}", async (
 
 ### Before vs. after
 
-| Before Phase 4 | After Phase 4 |
-| -------------- | ------------- |
-| Only `/api/tasks/{id}` existed and returned a minimal anonymous object | Three documented endpoints with strongly typed DTOs |
-| No aggregate stats or DB metrics | Stats endpoint exposes counts, success rate, timing, and database update metrics |
-| Downstream clients had to query EF entities directly | Web + console can rely on stable DTO contracts |
-| No pagination/filter support | API enforces pagination bounds and optional filters |
+| Before Phase 4                                                         | After Phase 4                                                                    |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Only `/api/tasks/{id}` existed and returned a minimal anonymous object | Three documented endpoints with strongly typed DTOs                              |
+| No aggregate stats or DB metrics                                       | Stats endpoint exposes counts, success rate, timing, and database update metrics |
+| Downstream clients had to query EF entities directly                   | Web + console can rely on stable DTO contracts                                   |
+| No pagination/filter support                                           | API enforces pagination bounds and optional filters                              |
 
 ---
 
