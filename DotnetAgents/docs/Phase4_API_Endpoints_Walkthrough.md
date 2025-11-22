@@ -1,526 +1,211 @@
-# ?? Phase 4: API Endpoints - Complete Implementation Guide
+dotnet build DotnetAgents\DotnetAgents.slnx
+﻿# Phase 4: API Endpoints – Complete Implementation Guide
 
-## ?? Overview
+## Overview
 
-This document provides a **step-by-step walkthrough** for implementing Phase 4 of the SignalR Real-Time Task Tracking system. Phase 4 adds REST API endpoints to list all tasks, get statistics, and provide enhanced task details.
+This walkthrough captures everything that shipped in **Phase 4** of the LLM response routing plan. The goal for this phase was to expose the enriched task projections over REST so that upcoming SignalR clients (Phase 5+) and dashboards (Phase 6) have a reliable data source.
 
 **Estimated Time:** 30 minutes  
-**Difficulty:** ?? Intermediate  
-**Prerequisites:** Phase 1-3 completed
+**Difficulty:** Intermediate  
+**Prerequisites:** Phases 1–3 complete and merged
 
-**Note:** Phase 4 is **OPTIONAL** for the Quick Win path. You can skip to Phase 5 if you only need the Chat UI working.
-
----
-
-## ?? Learning Objectives
-
-By the end of this phase, you will have:
-
-1. ? Created endpoint to list all tasks (with pagination)
-2. ? Created endpoint for task statistics
-3. ? Enhanced existing task detail endpoint
-4. ? Added query filtering capabilities
-5. ? Prepared for Tasks monitoring page (Phase 6)
+> Phase 4 is optional for the “Quick Win” chat path, but it is required for the real-time dashboards.
 
 ---
 
-## ?? Step-by-Step Implementation
+## Learning Objectives
 
-### Step 1: Add GET /api/tasks Endpoint (List All Tasks)
+By the end of this phase you will:
 
-#### ?? What We're Doing
-Creating an endpoint that returns a paginated list of all tasks with optional filtering.
+1. Implement `/api/tasks` with pagination + filtering
+2. Add `/api/tasks/stats` to surface aggregate metrics
+3. Enrich `/api/tasks/{id}` so it returns the complete task projection
+4. Centralize DTOs and query logic for reuse across API, web, and console clients
+5. Capture automated + manual verification artifacts for these endpoints
 
-#### ?? Why This Matters
-This endpoint enables:
-- Tasks monitoring page to display all tasks
-- Filtering by status (Queued, Running, Completed, Failed)
-- Filtering by user
-- Pagination for performance
+---
 
-Without this:
-- ? Can only view one task at a time (by ID)
-- ? No way to see task history
-- ? No overview of system activity
+## Step-by-Step Implementation
 
-#### ?? File to Modify
-`DotnetAgents.AgentApi\Program.cs`
+### Step 0: Create shared DTOs and a read-only query service
 
-#### ?? Code to Add
+We centralized every response shape inside `DotnetAgents.Core/Dtos/AgentTaskDtos.cs` so that both REST and SignalR clients deserialize the same contracts:
 
-Find the existing `GET /api/tasks/{id}` endpoint. Add BEFORE it:
+- `AgentTaskDto` – enriched projection with timestamps, computed progress, formatted durations, and update metrics
+- `PaginatedAgentTasksResponse` + `PaginationMetadata` – envelope for `/api/tasks`
+- `AgentTaskStatsDto` + nested records – aggregates for `/api/tasks/stats`
+
+`DotnetAgents.AgentApi/Services/AgentTaskQueryService.cs` is the single projection service. It accepts optional filters, applies pagination, and computes statistics/formatting helpers. Register it in DI alongside the SignalR infrastructure:
 
 ```csharp
-// List all tasks with optional filtering and pagination
+builder.Services.AddScoped<IAgentTaskQueryService, AgentTaskQueryService>();
+```
+
+Unit coverage for pagination, stats, and detail projections lives in `DotnetAgents.Tests/AgentTaskQueryServiceTests.cs` so we can validate the math outside of the HTTP pipeline.
+
+### Step 1: Implement `GET /api/tasks`
+
+**Goal.** Return a paginated task list with optional `status`, `userId`, `page`, and `pageSize` filters. Inputs default to page 1 / size 20 when omitted.
+
+**Key files**
+
+- `DotnetAgents.AgentApi/Program.cs` – minimal API endpoint
+- `DotnetAgents.AgentApi/Services/AgentTaskQueryService.cs` – backing projection
+
+**Handler snapshot**
+
+```csharp
 app.MapGet("/api/tasks", async (
-    AgentDbContext db,
-    Status? status,
-    string? userId,
-    int page = 1,
-    int pageSize = 20) =>
+  Status? status,
+  string? userId,
+  int page,
+  int pageSize,
+  IAgentTaskQueryService taskQueryService,
+  CancellationToken cancellationToken) =>
 {
-    if (page < 1) page = 1;
-    if (pageSize < 1 || pageSize > 100) pageSize = 20;
+  var effectivePage = page <= 0 ? 1 : page;
+  var effectivePageSize = pageSize <= 0 ? 20 : pageSize;
 
-    var query = db.AgentTasks.AsQueryable();
+  var errors = ValidatePagination(effectivePage, effectivePageSize);
+  if (errors is not null)
+  {
+    return Results.ValidationProblem(errors);
+  }
 
-    // Apply filters
-    if (status.HasValue)
-    {
-        query = query.Where(t => t.Status == status.Value);
-    }
+  var response = await taskQueryService.GetTasksAsync(
+    status,
+    userId,
+    effectivePage,
+    effectivePageSize,
+    cancellationToken);
 
-    if (!string.IsNullOrEmpty(userId))
-    {
-        query = query.Where(t => t.CreatedByUserId == userId);
-    }
-
-    // Get total count before pagination
-    var totalCount = await query.CountAsync();
-
-    // Apply pagination and ordering
-    var tasks = await query
-        .OrderByDescending(t => t.CreatedAt)
-        .Skip((page - 1) * pageSize)
-        .Take(pageSize)
-        .ToListAsync();
-
-    return Results.Ok(new
-    {
-        tasks,
-        pagination = new
-        {
-            page,
-            pageSize,
-            totalCount,
-            totalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
-        }
-    });
+  return Results.Ok(response);
 })
-.WithName("ListTasks")
+.WithName("ListAgentTasks")
 .WithTags("Tasks")
-.WithOpenApi(operation =>
-{
-    operation.Summary = "List all tasks";
-    operation.Description = "Returns a paginated list of tasks with optional filtering by status and user.";
-    return operation;
-});
+.WithOpenApi(...);
 ```
 
-#### ?? Important Notes
-- Default page size is 20, max is 100
-- Orders by `CreatedAt` descending (newest first)
-- Returns pagination metadata
-- Supports optional filters
+Swagger metadata documents each query parameter, the allowed status enum values, and sample pagination inputs. Validation enforces `1 <= page` and `1 <= pageSize <= 100` to prevent runaway queries.
 
-#### ? Verification Checklist
-- [ ] Endpoint added before existing `/api/tasks/{id}`
-- [ ] Query parameters: status, userId, page, pageSize
-- [ ] Pagination logic implemented
-- [ ] Filtering logic implemented
-- [ ] Returns tasks + pagination metadata
-- [ ] OpenAPI documentation added
-- [ ] File saved
+### Step 2: Implement `GET /api/tasks/stats`
 
----
+**Goal.** Provide aggregate counts, success rate, average execution duration, and database metrics derived from persisted `AgentTask` rows.
 
-### Step 2: Add GET /api/tasks/stats Endpoint
-
-#### ?? What We're Doing
-Creating an endpoint that returns aggregate statistics about tasks.
-
-#### ?? Why This Matters
-Statistics provide:
-- Total tasks by status
-- Success/failure rates
-- Average execution time
-- System health overview
-
-Powers the "Quick Stats" dashboard in Phase 6.
-
-#### ?? File to Modify
-`DotnetAgents.AgentApi\Program.cs` (same file)
-
-#### ?? Code to Add
-
-Add this endpoint after the `/api/tasks` list endpoint:
+**Implementation.** The endpoint is a thin wrapper over the query service:
 
 ```csharp
-// Get task statistics
-app.MapGet("/api/tasks/stats", async (AgentDbContext db) =>
+app.MapGet("/api/tasks/stats", async (
+  IAgentTaskQueryService taskQueryService,
+  CancellationToken cancellationToken) =>
 {
-    var now = DateTime.UtcNow;
-    var today = now.Date;
-
-    var allTasks = await db.AgentTasks.ToListAsync();
-
-    // Count by status
-    var queuedCount = allTasks.Count(t => t.Status == Status.Queued);
-    var runningCount = allTasks.Count(t => t.Status == Status.Running);
-    var completedCount = allTasks.Count(t => t.Status == Status.Completed);
-    var failedCount = allTasks.Count(t => t.Status == Status.Failed);
-
-    // Today's tasks
-    var todayTasks = allTasks.Where(t => t.CreatedAt.Date == today).ToList();
-    var completedToday = todayTasks.Count(t => t.Status == Status.Completed);
-    var failedToday = todayTasks.Count(t => t.Status == Status.Failed);
-
-    // Calculate average execution time (for completed tasks)
-    var completedTasksWithDuration = allTasks
-        .Where(t => t.Status == Status.Completed && t.Duration.HasValue)
-        .ToList();
-
-    var avgExecutionTime = completedTasksWithDuration.Any()
-        ? TimeSpan.FromSeconds(completedTasksWithDuration.Average(t => t.Duration!.Value.TotalSeconds))
-        : TimeSpan.Zero;
-
-    // Database operations metrics
-    var totalUpdates = allTasks.Sum(t => t.UpdateCount);
-    var avgUpdatesPerTask = allTasks.Any() ? allTasks.Average(t => t.UpdateCount) : 0;
-
-    return Results.Ok(new
-    {
-        totalTasks = allTasks.Count,
-        byStatus = new
-        {
-            queued = queuedCount,
-            running = runningCount,
-            completed = completedCount,
-            failed = failedCount
-        },
-        today = new
-        {
-            total = todayTasks.Count,
-            completed = completedToday,
-            failed = failedToday
-        },
-        performance = new
-        {
-            avgExecutionTime = avgExecutionTime.ToString(@"mm\:ss"),
-            avgExecutionTimeSeconds = avgExecutionTime.TotalSeconds,
-            successRate = completedCount + failedCount > 0
-                ? (double)completedCount / (completedCount + failedCount) * 100
-                : 0
-        },
-        database = new
-        {
-            totalUpdates,
-            avgUpdatesPerTask = Math.Round(avgUpdatesPerTask, 2)
-        }
-    });
+  var stats = await taskQueryService.GetStatsAsync(cancellationToken);
+  return Results.Ok(stats);
 })
-.WithName("GetTaskStats")
+.WithName("GetAgentTaskStats")
 .WithTags("Tasks")
-.WithOpenApi(operation =>
-{
-    operation.Summary = "Get task statistics";
-    operation.Description = "Returns aggregate statistics about all tasks including counts by status, performance metrics, and database insights.";
-    return operation;
-});
+.WithOpenApi(...);
 ```
 
-#### ? Verification Checklist
-- [ ] Endpoint returns counts by status
-- [ ] Calculates today's task counts
-- [ ] Computes average execution time
-- [ ] Computes success rate
-- [ ] Includes database metrics
-- [ ] OpenAPI documentation added
-- [ ] File saved
+`GetStatsAsync` groups by `Status`, computes “today” counts, averages execution durations, and emits the database metrics block (`totalUpdates`, `avgUpdatesPerTask`, `updatesPerSecond`). The DTO already has room for the Phase 8 interceptor metrics so the schema will not need to change later.
 
----
+### Step 3: Enrich `GET /api/tasks/{id}`
 
-### Step 3: Enhance GET /api/tasks/{id} Endpoint
+**Goal.** Return the exact `AgentTaskDto` payload for a single task, including computed fields and database metadata.
 
-#### ?? What We're Doing
-Updating the existing task detail endpoint to return ALL new fields.
+**Highlights**
 
-#### ?? Why This Matters
-The current endpoint only returns basic fields. Clients need:
-- Result and ErrorMessage
-- All timestamps
-- Progress information
-- Database metadata
-
-#### ?? File to Modify
-`DotnetAgents.AgentApi\Program.cs` (same file)
-
-#### ?? Code to Add
-
-Find the existing `GET /api/tasks/{id}` endpoint and replace it:
+- Reuses `IAgentTaskQueryService.GetTaskAsync` so projections stay centralized.
+- Returns a friendly 404 payload that echoes the `taskId` to help console/web diagnostics.
+- Swagger summary/description call out that timestamps, progress, and DB metrics are included.
 
 ```csharp
-// Get task by ID with full details
-app.MapGet("/api/tasks/{id}", async (Guid id, AgentDbContext db) =>
+app.MapGet("/api/tasks/{id:guid}", async (
+  Guid id,
+  IAgentTaskQueryService taskQueryService,
+  CancellationToken cancellationToken) =>
 {
-    var task = await db.AgentTasks.FindAsync(id);
-    
-    if (task == null)
+  var task = await taskQueryService.GetTaskAsync(id, cancellationToken);
+  if (task == null)
+  {
+    return Results.NotFound(new
     {
-        return Results.NotFound(new { error = $"Task {id} not found" });
-    }
-
-    return Results.Ok(new
-    {
-        task.Id,
-        task.Goal,
-        status = task.Status.ToString(),
-        task.CreatedByUserId,
-        
-        // Result tracking
-        task.Result,
-        task.ErrorMessage,
-        
-        // Progress tracking
-        task.CurrentIteration,
-        task.MaxIterations,
-        progressPercentage = task.MaxIterations > 0
-            ? (double)task.CurrentIteration / task.MaxIterations * 100
-            : 0,
-        
-        // Timestamps
-        task.CreatedAt,
-        task.StartedAt,
-        task.CompletedAt,
-        
-        // Computed properties
-        duration = task.Duration?.ToString(@"mm\:ss"),
-        durationSeconds = task.Duration?.TotalSeconds,
-        elapsed = task.Elapsed?.ToString(@"mm\:ss"),
-        elapsedSeconds = task.Elapsed?.TotalSeconds,
-        
-        // Database metadata
-        task.LastUpdatedAt,
-        task.UpdateCount,
-        updateFrequency = task.Duration.HasValue && task.Duration.Value.TotalSeconds > 0
-            ? task.UpdateCount / task.Duration.Value.TotalSeconds
-            : 0
+      error = $"Task {id} was not found.",
+      taskId = id
     });
+  }
+
+  return Results.Ok(task);
 })
 .WithName("GetAgentTaskStatus")
 .WithTags("Tasks")
-.WithOpenApi(operation =>
-{
-    operation.Summary = "Get task details";
-    operation.Description = "Returns complete details for a specific task including result, progress, timestamps, and database metadata.";
-    return operation;
-});
+.WithOpenApi(...);
 ```
 
-#### ? Verification Checklist
-- [ ] Returns all new fields from Phase 1
-- [ ] Includes computed duration/elapsed
-- [ ] Calculates progress percentage
-- [ ] Calculates update frequency
-- [ ] Returns 404 with error message if not found
-- [ ] OpenAPI documentation added
-- [ ] File saved
+### Step 4: Validate the endpoints
+
+1. **Automated tests** – Run `dotnet build` and `dotnet test DotnetAgents/DotnetAgents.Tests/DotnetAgents.Tests.csproj`. The service tests cover pagination, stats math, null-handling, and enriched projections.
+2. **Manual verification** – With the AppHost running (or using the in-memory harness), hit each endpoint via Swagger or curl. Canonical sample outputs live in `docs/verification/phase4/README.md` for regression tracking.
+3. **Filtering scenarios** – Exercise combinations like `status=Completed`, `userId=web-user`, and `page=2&pageSize=5` to make sure validation and pagination metadata behave as expected.
+4. **Detail endpoint** – Request a known task ID and confirm the `AgentTaskDto` matches the sample payload (progress %, formatted durations, update frequency, timestamps, etc.).
 
 ---
 
-### Step 4: Test API Endpoints
+## What Changed
 
-#### ?? What We're Doing
-Verifying all three new/updated endpoints work correctly.
-
-#### ?? How to Test
-
-**Step 4.1: Build and Run**
-
-```sh
-cd E:\src\github\intel-agency\DotnetAgents\DotnetAgents
-dotnet build
-
-cd DotnetAgents.AppHost
-dotnet run
-```
-
-**Step 4.2: Test GET /api/tasks (List)**
-
-Using Swagger UI:
-1. Open `/swagger`
-2. Find `GET /api/tasks`
-3. Click "Try it out"
-4. Leave parameters default
-5. Click "Execute"
-
-Expected response:
-```json
-{
-  "tasks": [
-    {
-      "id": "abc-123",
-      "goal": "list files",
-      "status": "Completed",
-      "result": "Listed 5 files...",
-      "currentIteration": 2,
-      "maxIterations": 10,
-      "createdAt": "2025-01-12T10:00:00Z",
-      "startedAt": "2025-01-12T10:00:02Z",
-      "completedAt": "2025-01-12T10:00:15Z"
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "pageSize": 20,
-    "totalCount": 5,
-    "totalPages": 1
-  }
-}
-```
-
-**Step 4.3: Test Filtering**
-
-Try filtering by status:
-- Query: `?status=Completed`
-- Should return only completed tasks
-
-Try pagination:
-- Query: `?page=1&pageSize=5`
-- Should return 5 tasks with pagination metadata
-
-**Step 4.4: Test GET /api/tasks/stats**
-
-1. Find `GET /api/tasks/stats` in Swagger
-2. Click "Try it out"
-3. Click "Execute"
-
-Expected response:
-```json
-{
-  "totalTasks": 10,
-  "byStatus": {
-    "queued": 1,
-    "running": 0,
-    "completed": 8,
-    "failed": 1
-  },
-  "today": {
-    "total": 3,
-    "completed": 2,
-    "failed": 1
-  },
-  "performance": {
-    "avgExecutionTime": "00:45",
-    "avgExecutionTimeSeconds": 45.2,
-    "successRate": 88.89
-  },
-  "database": {
-    "totalUpdates": 45,
-    "avgUpdatesPerTask": 4.5
-  }
-}
-```
-
-**Step 4.5: Test Enhanced GET /api/tasks/{id}**
-
-1. Find `GET /api/tasks/{id}` in Swagger
-2. Enter a task ID from the list
-3. Click "Execute"
-
-Verify response includes:
-- ? `result` field
-- ? `errorMessage` field
-- ? `currentIteration` and `maxIterations`
-- ? `progressPercentage`
-- ? `duration` and `durationSeconds`
-- ? `elapsed` and `elapsedSeconds`
-- ? `updateCount` and `updateFrequency`
-
-#### ? Verification Checklist
-- [ ] GET /api/tasks returns paginated list
-- [ ] Filtering by status works
-- [ ] Pagination works correctly
-- [ ] GET /api/tasks/stats returns all metrics
-- [ ] Success rate calculation is correct
-- [ ] GET /api/tasks/{id} returns enhanced details
-- [ ] 404 response works for non-existent tasks
-- [ ] No errors in logs
-- [ ] Swagger documentation displays correctly
-
----
-
-## ?? What Changed - Summary
-
-### New Endpoints
+### REST endpoints
 
 | Endpoint | Method | Purpose | Response |
-|----------|--------|---------|----------|
-| `/api/tasks` | GET | List all tasks | Paginated task list + metadata |
-| `/api/tasks/stats` | GET | Get statistics | Aggregate metrics |
-| `/api/tasks/{id}` | GET | Get task details | Enhanced task object |
+| --- | --- | --- | --- |
+| `/api/tasks` | GET | Paginated task listing with filters | `PaginatedAgentTasksResponse` |
+| `/api/tasks/stats` | GET | Aggregate counts, success rate, DB metrics | `AgentTaskStatsDto` |
+| `/api/tasks/{id}` | GET | Enriched single-task payload | `AgentTaskDto` |
 
-### API Capabilities
+### Supporting assets
 
-**Before Phase 4:**
-- Can only get task by ID
-- No way to list all tasks
-- No statistics or metrics
-- Basic task details only
+- `DotnetAgents.Core/Dtos/AgentTaskDtos.cs` – shared contracts
+- `DotnetAgents.AgentApi/Interfaces/IAgentTaskQueryService.cs` + implementation
+- `DotnetAgents.Tests/AgentTaskQueryServiceTests.cs` – regression coverage
+- `docs/verification/phase4/README.md` – captured Swagger/curl evidence
 
-**After Phase 4:**
-- ? List all tasks with pagination
-- ? Filter by status and user
-- ? Get system-wide statistics
-- ? Complete task details with computed fields
-- ? Database operation metrics
+### Before vs. after
 
----
-
-## ?? Next Steps
-
-### Phase 5: Web UI SignalR Client
-Connect the web UI to receive real-time updates in the Chat page.
-
-### Phase 6: Tasks Monitoring Page (Optional)
-Use these new endpoints to build a comprehensive tasks dashboard.
-
-### What Phase 4 Enables
-? **Tasks monitoring page data source** (Phase 6)  
-? **Historical task viewing**  
-? **System health monitoring**  
-? **Performance metrics tracking**  
-? **Database insights**  
+| Before Phase 4 | After Phase 4 |
+| -------------- | ------------- |
+| Only `/api/tasks/{id}` existed and returned a minimal anonymous object | Three documented endpoints with strongly typed DTOs |
+| No aggregate stats or DB metrics | Stats endpoint exposes counts, success rate, timing, and database update metrics |
+| Downstream clients had to query EF entities directly | Web + console can rely on stable DTO contracts |
+| No pagination/filter support | API enforces pagination bounds and optional filters |
 
 ---
 
-## ?? Learning Resources
+## Next Steps
 
-### ASP.NET Core Minimal APIs
-- [Minimal APIs overview](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis)
-- [OpenAPI support](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis/openapi)
-- [Route parameters](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/routing)
-
-### Entity Framework Core
-- [Querying data](https://learn.microsoft.com/en-us/ef/core/querying/)
-- [Pagination](https://learn.microsoft.com/en-us/ef/core/querying/pagination)
-- [Filtering](https://learn.microsoft.com/en-us/ef/core/querying/filters)
+- **Phase 5:** Plug these DTOs into the web + console SignalR clients so live updates reuse the same projections.
+- **Phase 6:** Build the `/tasks` dashboards against `/api/tasks` and `/api/tasks/stats`.
+- **Phase 7+:** Keep console parity by referencing these DTOs whenever new UI widgets require task data.
 
 ---
 
-## ? Phase 4 Completion Checklist
+## Learning Resources
 
-Before moving to Phase 5, confirm:
-
-- [ ] `GET /api/tasks` endpoint created
-- [ ] Pagination implemented and tested
-- [ ] Filtering by status and user works
-- [ ] `GET /api/tasks/stats` endpoint created
-- [ ] Statistics calculations are correct
-- [ ] `GET /api/tasks/{id}` enhanced with new fields
-- [ ] All endpoints have OpenAPI documentation
-- [ ] Swagger UI displays endpoints correctly
-- [ ] All endpoints tested successfully
-- [ ] No compilation or runtime errors
-- [ ] Ready for Web UI integration
+- [ASP.NET Core minimal APIs](https://learn.microsoft.com/aspnet/core/fundamentals/minimal-apis) – binding, validation, and OpenAPI metadata
+- [EF Core query fundamentals](https://learn.microsoft.com/ef/core/querying/) – projections, grouping, and aggregate queries used by the query service
 
 ---
 
-**Document Version:** 1.0  
+## Phase 4 Completion Checklist
+
+- [x] `GET /api/tasks` implements pagination + filtering with validation
+- [x] `GET /api/tasks/stats` aggregates match seeded data (see verification README)
+- [x] `GET /api/tasks/{id}` returns the full `AgentTaskDto`
+- [x] OpenAPI metadata updated for the three endpoints
+- [x] `dotnet build` + `dotnet test` executed successfully
+- [x] Verification artifacts captured under `docs/verification/phase4`
+
+**Document Version:** 1.1  
 **Phase:** 4 of 8  
-**Status:** ? COMPLETE  
+**Status:** COMPLETE  
 **Next Phase:** [Phase 5: Web UI SignalR Client](Phase5_Web_SignalR_Client_Walkthrough.md)
 
----
-
-?? **Congratulations!** You've successfully completed Phase 4! Your API now provides comprehensive task management endpoints!
+**🎉 Congratulations!** The API now exposes the complete task management surface needed for the upcoming SignalR clients and monitoring dashboards.
