@@ -83,17 +83,19 @@ public sealed class AgentTaskQueryService : IAgentTaskQueryService
         int GetTodayCount(Status status) => todayLookup.TryGetValue(status, out var count) ? count : 0;
         var todayTotal = todayCounts.Sum(x => x.Count);
 
-        var completedDurations = await _dbContext.AgentTasks
+        var performanceStats = await _dbContext.AgentTasks
             .AsNoTracking()
             .Where(t => t.Status == Status.Completed && t.StartedAt != null && t.CompletedAt != null)
-            .Select(t => new { t.StartedAt, t.CompletedAt })
-            .ToListAsync(cancellationToken);
+            .GroupBy(_ => 1)
+            .Select(group => new
+            {
+                AverageDurationSeconds = group.Average(t => (t.CompletedAt!.Value - t.StartedAt!.Value).TotalSeconds),
+                TotalDurationSeconds = group.Sum(t => (t.CompletedAt!.Value - t.StartedAt!.Value).TotalSeconds)
+            })
+            .FirstOrDefaultAsync(cancellationToken);
 
-        var avgExecutionSeconds = completedDurations.Count == 0
-            ? 0d
-            : completedDurations.Average(item => (item.CompletedAt!.Value - item.StartedAt!.Value).TotalSeconds);
-
-        var totalDurationSeconds = completedDurations.Sum(item => (item.CompletedAt!.Value - item.StartedAt!.Value).TotalSeconds);
+        var avgExecutionSeconds = performanceStats?.AverageDurationSeconds ?? 0d;
+        var totalDurationSeconds = performanceStats?.TotalDurationSeconds ?? 0d;
 
         var completedCount = GetStatusCount(Status.Completed);
         var failedCount = GetStatusCount(Status.Failed);

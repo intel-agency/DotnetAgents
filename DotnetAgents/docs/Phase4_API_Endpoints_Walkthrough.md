@@ -1,4 +1,3 @@
-dotnet build DotnetAgents\DotnetAgents.slnx
 ﻿# Phase 4: API Endpoints – Complete Implementation Guide
 
 ## Overview
@@ -58,15 +57,12 @@ Unit coverage for pagination, stats, and detail projections lives in `DotnetAgen
 app.MapGet("/api/tasks", async (
   Status? status,
   string? userId,
-  int page,
-  int pageSize,
+  int page = 1,
+  int pageSize = 20,
   IAgentTaskQueryService taskQueryService,
   CancellationToken cancellationToken) =>
 {
-  var effectivePage = page <= 0 ? 1 : page;
-  var effectivePageSize = pageSize <= 0 ? 20 : pageSize;
-
-  var errors = ValidatePagination(effectivePage, effectivePageSize);
+  var errors = ValidatePagination(page, pageSize);
   if (errors is not null)
   {
     return Results.ValidationProblem(errors);
@@ -75,8 +71,8 @@ app.MapGet("/api/tasks", async (
   var response = await taskQueryService.GetTasksAsync(
     status,
     userId,
-    effectivePage,
-    effectivePageSize,
+    page,
+    pageSize,
     cancellationToken);
 
   return Results.Ok(response);

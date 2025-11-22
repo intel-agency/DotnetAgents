@@ -216,21 +216,18 @@ app.MapPost("/api/tasks", async (string goal, AgentDbContext db) =>
 app.MapGet("/api/tasks", async (
     Status? status,
     string? userId,
-    int page,
-    int pageSize,
     IAgentTaskQueryService taskQueryService,
-    CancellationToken cancellationToken) =>
+    CancellationToken cancellationToken,
+    int page = 1,
+    int pageSize = 20) =>
 {
-    var effectivePage = page <= 0 ? 1 : page;
-    var effectivePageSize = pageSize <= 0 ? 20 : pageSize;
-
-    var errors = ValidatePagination(effectivePage, effectivePageSize);
+    var errors = ValidatePagination(page, pageSize);
     if (errors is not null)
     {
         return Results.ValidationProblem(errors);
     }
 
-    var response = await taskQueryService.GetTasksAsync(status, userId, effectivePage, effectivePageSize, cancellationToken);
+    var response = await taskQueryService.GetTasksAsync(status, userId, page, pageSize, cancellationToken);
     return Results.Ok(response);
 })
 .WithName("ListAgentTasks")

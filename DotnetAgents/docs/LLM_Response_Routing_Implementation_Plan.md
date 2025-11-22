@@ -152,7 +152,6 @@ Completion of each phase requires all relevant checkboxes above plus merged PR w
   6. **Console parity:** lock down response field names/types so both Blazor and console hub/API clients can deserialize shared DTOs without drift; coordinate any schema adjustments with Phase 5 owners.
   7. **OpenAPI contract:** export and publish the Swagger/OpenAPI spec (checked into repo or shared location) so both clients and the server agree on the contract before integrating Phase 5+ consumers.
 - **Dependencies:** relies on Phase 3 fields/notifications; coordinate DTO updates with upcoming Phase 5 clients.
-- **Deliverables:** shared DTOs (`DotnetAgents.Core/Dtos/AgentTaskDtos.cs`), query service (`IAgentTaskQueryService` + implementation), `AgentTaskQueryServiceTests`, updated walkthrough (`docs/Phase4_API_Endpoints_Walkthrough.md`), and verification artifacts under `docs/verification/phase4`.
  - **Deliverables:** shared DTOs (`DotnetAgents.Core/Dtos/AgentTaskDtos.cs`), query service (`IAgentTaskQueryService` + implementation), `AgentTaskQueryServiceTests`, updated walkthrough (`docs/Phase4_API_Endpoints_Walkthrough.md` v1.1), and verification artifacts under `docs/verification/phase4`.
 
 ### Phase 5 – Web SignalR Client (Complete + Console parity)

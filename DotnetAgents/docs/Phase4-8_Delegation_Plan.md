@@ -2,7 +2,7 @@
 
 ## Context & Status
 - **Phases 2–3**: Complete (SignalR hub + agent/worker instrumentation are merged per `LLM_Response_Routing_Implementation_Plan.md`).
-- **Phase 4**: Actively in progress (`feature/phase-4-api-endpoints`); endpoints and OpenAPI contract still missing.
+- **Phase 4**: Complete (endpoints, DTOs, query service, tests, and OpenAPI documentation implemented; final review/QA in progress).
 - **Phase 5**: Partially implemented in the web UI; console parity and resilience work remain.
 - **Phase 6**: Not started — requires both the Phase 4 API surfaces and Phase 5 client infrastructure.
 - **Phase 7**: Web walkthrough is complete, but console experience still depends on Phase 5 outputs.

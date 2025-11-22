@@ -66,11 +66,11 @@ public class AgentTaskQueryServiceTests
             };
 
             context.AgentTasks.AddRange(completedTaskNew, completedTaskOld, runningTask);
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var service = new AgentTaskQueryService(context, NullLogger<AgentTaskQueryService>.Instance);
 
-            var response = await service.GetTasksAsync(Status.Completed, "user-1", page: 1, pageSize: 1);
+            var response = await service.GetTasksAsync(Status.Completed, "user-1", page: 1, pageSize: 1, cancellationToken: TestContext.Current.CancellationToken);
 
             response.Pagination.TotalCount.Should().Be(2);
             response.Pagination.TotalPages.Should().Be(2);
@@ -104,7 +104,7 @@ public class AgentTaskQueryServiceTests
                 new AgentTask
                 {
                     Id = Guid.NewGuid(),
-                    Goal = " todays success",
+                    Goal = "todays success",
                     Status = Status.Completed,
                     CreatedAt = today,
                     StartedAt = today.AddMinutes(-4),
@@ -132,10 +132,10 @@ public class AgentTaskQueryServiceTests
                     UpdateCount = 1
                 });
 
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var service = new AgentTaskQueryService(context, NullLogger<AgentTaskQueryService>.Instance);
-            var stats = await service.GetStatsAsync();
+            var stats = await service.GetStatsAsync(TestContext.Current.CancellationToken);
 
             stats.TotalTasks.Should().Be(3);
             stats.ByStatus.Completed.Should().Be(1);
@@ -163,7 +163,7 @@ public class AgentTaskQueryServiceTests
         try
         {
             var service = new AgentTaskQueryService(context, NullLogger<AgentTaskQueryService>.Instance);
-            var result = await service.GetTaskAsync(Guid.NewGuid());
+            var result = await service.GetTaskAsync(Guid.NewGuid(), TestContext.Current.CancellationToken);
             result.Should().BeNull();
         }
         finally
