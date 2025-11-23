@@ -1,8 +1,14 @@
+using System.Threading;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
+using DotnetAgents.Core.Interfaces;
+using DotnetAgents.Core.SignalR;
+using DotnetAgents.Console.Services;
 using IntelAgent;
 
 
@@ -11,11 +17,18 @@ namespace DotnetAgents.Console
     public partial class MainWindow : Window
     {
         private readonly Agent? _agent;
+        private readonly ITaskHubClient _taskHubClient;
+        private readonly CancellationTokenSource _shutdownCts = new();
+        private string _headerStatus;
+        private string _connectionStatus;
         private const string Separator = "========================================";
 
         public MainWindow()
         {
             InitializeComponent();
+            _headerStatus = "AGENT CHAT - Initializing...";
+            _connectionStatus = "SignalR: Initializing";
+            UpdateHeader();
 
             // Add keyboard shortcuts
             inputTextBox.KeyDown += InputTextBox_KeyDown;
@@ -25,12 +38,14 @@ namespace DotnetAgents.Console
             try
             {
                 //_agent = new Agent();
-                UpdateHeader("AGENT CHAT - Ready");
+                _headerStatus = "AGENT CHAT - Ready";
+                UpdateHeader();
                 UpdateChatDisplay("Agent initialized successfully.\nType your message below and press Enter or click [S]end.\n\n");
             }
             catch (InvalidOperationException ex)
             {
-                UpdateHeader("AGENT CHAT - Error");
+                _headerStatus = "AGENT CHAT - Error";
+                UpdateHeader();
                 UpdateChatDisplay($"ERROR: Agent initialization failed\n\n" +
                                 $"{ex.Message}\n\n" +
                                 "Required environment variables:\n" +
@@ -38,6 +53,14 @@ namespace DotnetAgents.Console
                                 "  - OPENAI_MODEL_NAME\n" +
                                 "  - OPENAI_ENDPOINT (optional)\n");
             }
+
+            var baseUrl = TaskHubEndpointResolver.ResolveBaseUrl(configuration: null);
+            _taskHubClient = new ConsoleTaskHubClient(baseUrl);
+            _taskHubClient.ConnectionStateChanged += TaskHubClientOnConnectionStateChanged;
+            _connectionStatus = "SignalR: Connecting";
+            UpdateHeader();
+
+            _ = MaintainSignalRConnectionAsync(_shutdownCts.Token);
         }
 
         private void UpdateHeader(string text)
@@ -46,7 +69,7 @@ namespace DotnetAgents.Console
             var border = this.FindControl<Border>("HeaderBorder");
             if (border?.Child is TextBlock textBlock)
             {
-                textBlock.Text = text;
+                textBlock.Text = $"{_headerStatus} | {_connectionStatus}";
             }
         }
 
@@ -105,6 +128,7 @@ namespace DotnetAgents.Console
 
         private void OnExit(object sender, RoutedEventArgs e)
         {
+            _shutdownCts.Cancel();
             var lifetime = Application.Current!.ApplicationLifetime as IControlledApplicationLifetime;
             lifetime!.Shutdown();
         }
@@ -127,6 +151,10 @@ namespace DotnetAgents.Console
 
             // Update header to show working state
             UpdateHeader("AGENT CHAT - Processing...");
+            _headerStatus = "AGENT CHAT - Processing...";
+            UpdateHeader();
+            _headerStatus = "AGENT CHAT - Ready";
+            UpdateHeader();
 
             // Display user message
             AppendChatDisplay($"{Separator}\n");
@@ -167,6 +195,80 @@ namespace DotnetAgents.Console
                 // Update header to show error
                 UpdateHeader("AGENT CHAT - Error");
             }
+            _headerStatus = "AGENT CHAT - Error";
+            UpdateHeader();
+        }
+
+        private async Task MaintainSignalRConnectionAsync(CancellationToken cancellationToken)
+        {
+            var delay = TimeSpan.FromSeconds(2);
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                try
+                {
+                    await _taskHubClient.StartAsync(cancellationToken);
+                    return;
+                }
+                catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+                {
+                    var retryMessage = $"SignalR connection failed ({ex.Message}). Retrying in {delay.TotalSeconds:0}s";
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        AppendChatDisplay($"\n{Separator}\n{retryMessage}\n{Separator}\n");
+                        _connectionStatus = $"SignalR: Retrying";
+                        UpdateHeader();
+                    });
+
+                    try
+                    {
+                        await Task.Delay(delay, cancellationToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return;
+                    }
+
+                    delay = TimeSpan.FromSeconds(Math.Min(delay.TotalSeconds * 2, 30));
+                }
+            }
+        }
+
+        private void TaskHubClientOnConnectionStateChanged(object? sender, TaskHubConnectionStateChangedEventArgs e)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                _connectionStatus = e.NewState switch
+                {
+                    TaskHubConnectionState.Connected => "SignalR: Connected",
+                    TaskHubConnectionState.Connecting => "SignalR: Connecting",
+                    TaskHubConnectionState.Reconnecting => "SignalR: Reconnecting",
+                    _ => "SignalR: Disconnected"
+                };
+                UpdateHeader();
+
+                if (e.Exception is not null)
+                {
+                    AppendChatDisplay($"\n{Separator}\nSignalR connection update: {e.Exception.Message}\n{Separator}\n");
+                }
+            });
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            _shutdownCts.Cancel();
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await _taskHubClient.StopAsync();
+                }
+                finally
+                {
+                    await _taskHubClient.DisposeAsync();
+                }
+            });
+
+            base.OnClosed(e);
         }
     }
 }

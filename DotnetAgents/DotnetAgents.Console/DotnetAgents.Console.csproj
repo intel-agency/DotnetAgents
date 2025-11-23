@@ -9,10 +9,13 @@
 
     <ItemGroup>
         <PackageReference Include="Consolonia" Version="11.3.*-beta.*" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\IntelAgent\IntelAgent.csproj" />
+        <ProjectReference Include="..\DotnetAgents.Core\DotnetAgents.Core.csproj" />
     </ItemGroup>
 
 </Project>

@@ -1,3 +1,4 @@
+using DotnetAgents.Core.Interfaces;
 using DotnetAgents.Web;
 using DotnetAgents.Web.Components;
 using DotnetAgents.Web.Services;
@@ -30,6 +31,10 @@ builder.Services.AddHttpClient<ITelemetryService, TelemetryService>(client =>
     // Learn more about service discovery scheme resolution at https://aka.ms/dotnet/sdschemes.
     client.BaseAddress = new("https+http://agentapi");
 });
+
+// Register the shared TaskHub client implementation so Razor components can subscribe later.
+builder.Services.AddSingleton<ITaskHubClient, SignalRTaskHubClient>();
+builder.Services.AddHostedService<TaskHubClientHostedService>();
 
 
 
