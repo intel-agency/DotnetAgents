@@ -29,6 +29,7 @@
     <ProjectReference Include="..\DotnetAgents.AppHost\DotnetAgents.AppHost.csproj" />
     <ProjectReference Include="..\DotnetAgents.AgentApi\DotnetAgents.AgentApi.csproj" />
     <ProjectReference Include="..\DotnetAgents.Core\DotnetAgents.Core.csproj" />
+    <ProjectReference Include="..\DotnetAgents.Web\DotnetAgents.Web.csproj" />
   </ItemGroup>
 
   <ItemGroup>

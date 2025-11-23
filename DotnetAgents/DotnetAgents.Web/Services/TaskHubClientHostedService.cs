@@ -39,9 +39,10 @@ public sealed class TaskHubClientHostedService : IHostedService
         {
             await _taskHubClient.StopAsync(cancellationToken);
         }
-        finally
+        catch (Exception ex)
         {
-            await _taskHubClient.DisposeAsync();
+            _logger.LogError(ex, "Failed to stop SignalR TaskHub client");
+            throw;
         }
     }
 }

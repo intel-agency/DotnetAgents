@@ -41,7 +41,7 @@ The client package provides:
 #### ?? Command to Run
 
 ```sh
-cd E:\src\github\intel-agency\DotnetAgents\DotnetAgents\DotnetAgents.Web
+cd DotnetAgents/DotnetAgents.Web
 dotnet add package Microsoft.AspNetCore.SignalR.Client
 ```
 
@@ -228,8 +228,8 @@ Verifying the web UI can connect to the SignalR hub.
 **Step 5.1: Build and Run**
 
 ```sh
-cd E:\src\github\intel-agency\DotnetAgents\DotnetAgents
-dotnet build
+cd DotnetAgents
+dotnet build DotnetAgents.slnx
 
 cd DotnetAgents.AppHost
 dotnet run
@@ -250,6 +250,9 @@ info: DotnetAgents.Web.Services.SignalRTaskHubClient[0]
 info: DotnetAgents.Web.Services.SignalRTaskHubClient[0]
     Connection state changed from Connecting → Connected
 ```
+
+> Sample output from the latest remediation run is archived under
+> [`verification/phase5/phase5-apphost.log`](verification/phase5/phase5-apphost.log).
 
 **Step 5.3: Check API Logs**
 
@@ -277,7 +280,7 @@ desktop. Quick smoke test to ensure both front-ends connect cleanly.
 1. With the Aspire host still running, start the console app:
 
 ```sh
-cd E:\src\github\intel-agency\DotnetAgents\DotnetAgents.Console
+cd DotnetAgents/DotnetAgents.Console
 dotnet run
 ```
 
@@ -289,6 +292,9 @@ dotnet run
 ```
 
 3. In API logs, confirm an additional client connection entry appears (same as web).
+
+> A captured console transcript is stored at
+> [`verification/phase5/phase5-console.log`](verification/phase5/phase5-console.log).
 
 #### ? Verification Checklist
 - [ ] Console status text reflects Connecting → Connected transitions
@@ -357,6 +363,21 @@ Before moving to Phase 7, confirm:
 - [ ] Console client successfully connects (recommended)
 - [ ] AgentAPI logs show client connection events
 - [ ] Ready for Chat UI integration
+
+---
+
+## ✅ Verification Artefacts
+
+The following remediation evidence is stored under `docs/verification/phase5/` so the steps
+can be audited without relying on machine-specific paths:
+
+| Artefact                                                       | Description                                                                                              |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| [`phase5-apphost.log`](verification/phase5/phase5-apphost.log) | Combined Aspire AppHost output showing the web SignalR client lifecycle and Agent API connection events. |
+| [`phase5-console.log`](verification/phase5/phase5-console.log) | Console client session demonstrating header updates, connection transitions, and graceful shutdown.      |
+
+Refer to these files (or regenerate them by re-running the commands in Steps 5–6) when updating
+Issue #11 or future PRs.
 
 ---
 

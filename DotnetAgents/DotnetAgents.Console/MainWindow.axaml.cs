@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -10,6 +11,7 @@ using DotnetAgents.Core.Interfaces;
 using DotnetAgents.Core.SignalR;
 using DotnetAgents.Console.Services;
 using IntelAgent;
+using Microsoft.Extensions.Logging;
 
 
 namespace DotnetAgents.Console
@@ -19,6 +21,9 @@ namespace DotnetAgents.Console
         private readonly Agent? _agent;
         private readonly ITaskHubClient _taskHubClient;
         private readonly CancellationTokenSource _shutdownCts = new();
+        private readonly ILogger _logger;
+        private Task? _connectionMaintenanceTask;
+        private bool _shutdownInitiated;
         private string _headerStatus;
         private string _connectionStatus;
         private const string Separator = "========================================";
@@ -26,6 +31,7 @@ namespace DotnetAgents.Console
         public MainWindow()
         {
             InitializeComponent();
+            _logger = new DebugLogger(nameof(MainWindow));
             _headerStatus = "AGENT CHAT - Initializing...";
             _connectionStatus = "SignalR: Initializing";
             UpdateHeader();
@@ -34,24 +40,42 @@ namespace DotnetAgents.Console
             inputTextBox.KeyDown += InputTextBox_KeyDown;
             this.KeyDown += Window_KeyDown;
 
+            var agentInitialized = true;
+
             // Initialize the agent
             try
             {
-                //_agent = new Agent();
-                _headerStatus = "AGENT CHAT - Ready";
-                UpdateHeader();
-                UpdateChatDisplay("Agent initialized successfully.\nType your message below and press Enter or click [S]end.\n\n");
+                //_agent = new Agent(...);
             }
             catch (InvalidOperationException ex)
             {
-                _headerStatus = "AGENT CHAT - Error";
-                UpdateHeader();
-                UpdateChatDisplay($"ERROR: Agent initialization failed\n\n" +
-                                $"{ex.Message}\n\n" +
-                                "Required environment variables:\n" +
-                                "  - OPENAI_API_KEY\n" +
-                                "  - OPENAI_MODEL_NAME\n" +
-                                "  - OPENAI_ENDPOINT (optional)\n");
+                agentInitialized = false;
+                DisableAgentInteractions($"ERROR: Agent initialization failed\n\n" +
+                                         $"{ex.Message}\n\n" +
+                                         "Required environment variables:\n" +
+                                         "  - OPENAI_API_KEY\n" +
+                                         "  - OPENAI_MODEL_NAME\n" +
+                                         "  - OPENAI_ENDPOINT (optional)\n");
+            }
+            catch (Exception ex)
+            {
+                agentInitialized = false;
+                DisableAgentInteractions("Agent initialization failed unexpectedly. Check logs for details.");
+                _logger.LogError(ex, "Agent initialization failed.");
+            }
+
+            if (_agent is not null && agentInitialized)
+            {
+                SetHeaderStatus("AGENT CHAT - Ready");
+                UpdateChatDisplay("Agent initialized successfully.\nType your message below and press Enter or click [S]end.\n\n");
+            }
+            else
+            {
+                SetHeaderStatus("AGENT CHAT - Unavailable");
+                if (!_shutdownInitiated && sendButton is { IsEnabled: true })
+                {
+                    DisableAgentInteractions("Agent chat is disabled. Configure the agent service to enable conversations.");
+                }
             }
 
             var baseUrl = TaskHubEndpointResolver.ResolveBaseUrl(configuration: null);
@@ -60,7 +84,8 @@ namespace DotnetAgents.Console
             _connectionStatus = "SignalR: Connecting";
             UpdateHeader();
 
-            _ = MaintainSignalRConnectionAsync(_shutdownCts.Token);
+            _connectionMaintenanceTask = MaintainSignalRConnectionAsync(_shutdownCts.Token);
+            ObserveTask(_connectionMaintenanceTask, "SignalR connection maintenance");
         }
 
         private void UpdateHeader()
@@ -128,20 +153,16 @@ namespace DotnetAgents.Console
 
         private void OnExit(object? sender, RoutedEventArgs e)
         {
-            _shutdownCts.Cancel();
+            InitiateShutdown();
             var lifetime = Application.Current!.ApplicationLifetime as IControlledApplicationLifetime;
             lifetime!.Shutdown();
         }
 
-        private void OnSend(object? sender, RoutedEventArgs e)
+        private async void OnSend(object? sender, RoutedEventArgs e)
         {
             if (_agent == null)
             {
-                AppendChatDisplay($"\n{Separator}\n" +
-                                $"ERROR: Agent not initialized\n" +
-                                $"{Separator}\n\n");
-                _headerStatus = "AGENT CHAT - Error";
-                UpdateHeader();
+                AppendChatDisplay($"\n{Separator}\nAgent chat is not configured. Configure the agent service to enable conversations.\n{Separator}\n\n");
                 return;
             }
 
@@ -152,8 +173,7 @@ namespace DotnetAgents.Console
             }
 
             // Update header to show working state
-            _headerStatus = "AGENT CHAT - Processing...";
-            UpdateHeader();
+            SetHeaderStatus("AGENT CHAT - Processing...");
 
             // Display user message
             AppendChatDisplay($"{Separator}\n");
@@ -170,6 +190,7 @@ namespace DotnetAgents.Console
                 // Call the agent
                 //var request = new AgentResponseRequest { Prompt = userInput };
                 //var response = await _agent.PromptAgentAsync(request);
+                await Task.CompletedTask;
 
                 // Remove "Processing..." and display response
                 var textBlock = this.FindControl<TextBlock>("agentTextBox");
@@ -180,8 +201,7 @@ namespace DotnetAgents.Console
                 //AppendChatDisplay($"AGENT:\n{response}\n\n");
 
                 // Update header back to ready
-                _headerStatus = "AGENT CHAT - Ready";
-                UpdateHeader();
+                SetHeaderStatus("AGENT CHAT - Ready");
             }
             catch (Exception ex)
             {
@@ -193,8 +213,8 @@ namespace DotnetAgents.Console
                 AppendChatDisplay($"ERROR:\n{ex.Message}\n\n");
 
                 // Update header to show error
-                _headerStatus = "AGENT CHAT - Error";
-                UpdateHeader();
+                SetHeaderStatus("AGENT CHAT - Error");
+                _logger.LogError(ex, "Agent interaction failed.");
             }
         }
 
@@ -217,6 +237,7 @@ namespace DotnetAgents.Console
                         _connectionStatus = $"SignalR: Retrying";
                         UpdateHeader();
                     });
+                    _logger.LogWarning(ex, "SignalR connection failed. Retrying in {DelaySeconds} seconds.", delay.TotalSeconds);
 
                     try
                     {
@@ -254,20 +275,111 @@ namespace DotnetAgents.Console
 
         protected override void OnClosed(EventArgs e)
         {
+            InitiateShutdown();
+            base.OnClosed(e);
+        }
+
+        private void InitiateShutdown()
+        {
+            if (_shutdownInitiated)
+            {
+                return;
+            }
+
+            _shutdownInitiated = true;
             _shutdownCts.Cancel();
-            Task.Run(async () =>
+            ObserveTask(ShutdownAsync(), "Console shutdown");
+        }
+
+        private async Task ShutdownAsync()
+        {
+            try
+            {
+                await _taskHubClient.StopAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to stop TaskHub client during shutdown.");
+            }
+            finally
             {
                 try
                 {
-                    await _taskHubClient.StopAsync();
-                }
-                finally
-                {
                     await _taskHubClient.DisposeAsync();
                 }
-            });
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to dispose TaskHub client.");
+                }
 
-            base.OnClosed(e);
+                if (_connectionMaintenanceTask is not null)
+                {
+                    try
+                    {
+                        await _connectionMaintenanceTask.ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Connection maintenance task failed during shutdown.");
+                    }
+                }
+
+                _shutdownCts.Dispose();
+            }
+        }
+
+        private void ObserveTask(Task task, string operation)
+        {
+            task.ContinueWith(t =>
+            {
+                var exception = t.Exception?.Flatten();
+                _logger.LogError(exception ?? new Exception("Unknown error"), "Background operation '{Operation}' faulted.", operation);
+            }, TaskContinuationOptions.OnlyOnFaulted);
+        }
+
+        private void SetHeaderStatus(string status)
+        {
+            _headerStatus = status;
+            UpdateHeader();
+        }
+
+        private void DisableAgentInteractions(string message)
+        {
+            AppendChatDisplay($"\n{Separator}\n{message}\n{Separator}\n");
+            if (inputTextBox is not null)
+            {
+                inputTextBox.IsEnabled = false;
+            }
+
+            if (sendButton is not null)
+            {
+                sendButton.IsEnabled = false;
+            }
+        }
+
+        private sealed class DebugLogger : ILogger
+        {
+            private readonly string _categoryName;
+
+            public DebugLogger(string categoryName)
+            {
+                _categoryName = categoryName;
+            }
+
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Information;
+
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+                Func<TState, Exception?, string> formatter)
+            {
+                var message = formatter(state, exception);
+                Debug.WriteLine($"[{_categoryName}] {logLevel}: {message}");
+                if (exception is not null)
+                {
+                    Debug.WriteLine(exception);
+                }
+            }
         }
     }
 }

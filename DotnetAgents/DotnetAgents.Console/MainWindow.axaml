@@ -1,61 +1,73 @@
-<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:console="https://github.com/jinek/consolonia"
-        xmlns:local="clr-namespace:DotnetAgents.Console"
-        x:Class="DotnetAgents.Console.MainWindow"
-        RequestedThemeVariant="Dark"
-        Title="Agent Chat">
+<Window
+    x:Class="DotnetAgents.Console.MainWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:console="https://github.com/jinek/consolonia"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:DotnetAgents.Console"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="Agent Chat"
+    RequestedThemeVariant="Dark">
     <DockPanel LastChildFill="True">
-        <!-- Header docked at top -->
-        <Border Name="HeaderBorder"
-                DockPanel.Dock="Top" 
-                BorderThickness="1" 
-                BorderBrush="Cyan"
-                Padding="1"
-                Margin="1">
-            <TextBlock Text="AGENT CHAT - Ready"
-                       TextAlignment="Center"
-                       FontWeight="Bold"/>
+        <!--  Header docked at top  -->
+        <Border
+            Name="HeaderBorder"
+            Margin="1"
+            Padding="1"
+            BorderBrush="Cyan"
+            BorderThickness="1"
+            DockPanel.Dock="Top">
+            <TextBlock
+                FontWeight="Bold"
+                Text="AGENT CHAT - Ready"
+                TextAlignment="Center" />
         </Border>
 
-        <!-- Buttons docked at bottom -->
-        <StackPanel DockPanel.Dock="Bottom" 
-                    Orientation="Horizontal"
-                    Margin="1">
-            <Button Content="[S]end"
-                    Click="OnSend"
-                    MinWidth="12"
-                    Margin="0,0,1,0" />
-            <Button Content="[E]xit"
-                    Click="OnExit"
-                    MinWidth="12" />
+        <!--  Buttons docked at bottom  -->
+        <StackPanel
+            Margin="1"
+            DockPanel.Dock="Bottom"
+            Orientation="Horizontal">
+            <Button
+                Name="sendButton"
+                MinWidth="12"
+                Margin="0,0,1,0"
+                Click="OnSend"
+                Content="[S]end" />
+            <Button
+                MinWidth="12"
+                Click="OnExit"
+                Content="[E]xit" />
         </StackPanel>
 
-        <!-- Input docked at bottom (above buttons) -->
-        <Border DockPanel.Dock="Bottom"
-                BorderThickness="1"
-                BorderBrush="Gray"
-                Margin="1,1,1,0">
-            <TextBox Name="inputTextBox" 
-                     AcceptsReturn="False" 
-                     TextWrapping="NoWrap"
-                     Watermark="Type your message..."/>
+        <!--  Input docked at bottom (above buttons)  -->
+        <Border
+            Margin="1,1,1,0"
+            BorderBrush="Gray"
+            BorderThickness="1"
+            DockPanel.Dock="Bottom">
+            <TextBox
+                Name="inputTextBox"
+                AcceptsReturn="False"
+                TextWrapping="NoWrap"
+                Watermark="Type your message..." />
         </Border>
 
-        <!-- Chat display fills remaining space -->
-        <Border BorderThickness="1" 
-                BorderBrush="Gray"
-                Margin="1"
-                ClipToBounds="True">
-            <ScrollViewer Name="chatScrollViewer"
-                         VerticalScrollBarVisibility="Auto"
-                         HorizontalScrollBarVisibility="Disabled">
-                <TextBlock Name="agentTextBox" 
-                           TextWrapping="Wrap"
-                           Padding="1"
-                           Text="Ready. Type a message below and press Enter or click Send."/>
+        <!--  Chat display fills remaining space  -->
+        <Border
+            Margin="1"
+            BorderBrush="Gray"
+            BorderThickness="1"
+            ClipToBounds="True">
+            <ScrollViewer
+                Name="chatScrollViewer"
+                HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto">
+                <TextBlock
+                    Name="agentTextBox"
+                    Padding="1"
+                    Text="Ready. Type a message below and press Enter or click Send."
+                    TextWrapping="Wrap" />
             </ScrollViewer>
         </Border>
     </DockPanel>
