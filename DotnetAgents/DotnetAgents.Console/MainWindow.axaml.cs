@@ -63,7 +63,7 @@ namespace DotnetAgents.Console
             _ = MaintainSignalRConnectionAsync(_shutdownCts.Token);
         }
 
-        private void UpdateHeader(string text)
+        private void UpdateHeader()
         {
             // Find the header TextBlock in the Border
             var border = this.FindControl<Border>("HeaderBorder");
@@ -126,20 +126,22 @@ namespace DotnetAgents.Console
             }
         }
 
-        private void OnExit(object sender, RoutedEventArgs e)
+        private void OnExit(object? sender, RoutedEventArgs e)
         {
             _shutdownCts.Cancel();
             var lifetime = Application.Current!.ApplicationLifetime as IControlledApplicationLifetime;
             lifetime!.Shutdown();
         }
 
-        private async void OnSend(object? sender, RoutedEventArgs e)
+        private void OnSend(object? sender, RoutedEventArgs e)
         {
             if (_agent == null)
             {
                 AppendChatDisplay($"\n{Separator}\n" +
                                 $"ERROR: Agent not initialized\n" +
                                 $"{Separator}\n\n");
+                _headerStatus = "AGENT CHAT - Error";
+                UpdateHeader();
                 return;
             }
 
@@ -150,10 +152,7 @@ namespace DotnetAgents.Console
             }
 
             // Update header to show working state
-            UpdateHeader("AGENT CHAT - Processing...");
             _headerStatus = "AGENT CHAT - Processing...";
-            UpdateHeader();
-            _headerStatus = "AGENT CHAT - Ready";
             UpdateHeader();
 
             // Display user message
@@ -181,7 +180,8 @@ namespace DotnetAgents.Console
                 //AppendChatDisplay($"AGENT:\n{response}\n\n");
 
                 // Update header back to ready
-                UpdateHeader("AGENT CHAT - Ready");
+                _headerStatus = "AGENT CHAT - Ready";
+                UpdateHeader();
             }
             catch (Exception ex)
             {
@@ -193,10 +193,9 @@ namespace DotnetAgents.Console
                 AppendChatDisplay($"ERROR:\n{ex.Message}\n\n");
 
                 // Update header to show error
-                UpdateHeader("AGENT CHAT - Error");
+                _headerStatus = "AGENT CHAT - Error";
+                UpdateHeader();
             }
-            _headerStatus = "AGENT CHAT - Error";
-            UpdateHeader();
         }
 
         private async Task MaintainSignalRConnectionAsync(CancellationToken cancellationToken)

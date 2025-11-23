@@ -10,7 +10,7 @@
     <ItemGroup>
         <PackageReference Include="Consolonia" Version="11.3.*-beta.*" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
     </ItemGroup>
 
     <ItemGroup>
