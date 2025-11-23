@@ -14,6 +14,7 @@ using DotnetAgents.AgentApi.Model; // For PromptAgentRequest/Response
 using Microsoft.Extensions.DependencyInjection;
 using IntelAgent;
 using Microsoft.AspNetCore.Http.HttpResults;
+using System.Collections.Generic;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,7 +42,7 @@ builder.Services.AddSwaggerGen(options =>
         Version = "v1",
         Description = "Multi-provider AI agent API with tool calling support"
     });
-    
+
     // Enable XML documentation if available
     var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
@@ -54,6 +55,7 @@ builder.Services.AddSwaggerGen(options =>
 // Register SignalR infrastructure for real-time notifications (Phase 2)
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<ITaskNotificationService, TaskNotificationService>();
+builder.Services.AddScoped<IAgentTaskQueryService, AgentTaskQueryService>();
 
 // 2. Register Agent Core Logic (Chapter 1 & 2)
 builder.Services.AddScoped<IIntelAgent, Agent>();
@@ -125,7 +127,7 @@ app.MapHub<TaskHub>("/taskHub");
 app.MapPost("/api/agent/prompt", async (PromptAgentRequest request, AgentDbContext db, ILogger<Program> logger) =>
 {
     logger.LogInformation("Received prompt request: {Prompt}", request.Prompt);
-    
+
     // Create a new agent task for this prompt
     var task = new AgentTask
     {
@@ -134,12 +136,12 @@ app.MapPost("/api/agent/prompt", async (PromptAgentRequest request, AgentDbConte
         Status = Status.Queued,
         CreatedByUserId = "web-user" // TODO: Get from HttpContext.User
     };
-    
+
     db.AgentTasks.Add(task);
     await db.SaveChangesAsync();
-    
+
     logger.LogInformation("Created agent task {TaskId} for prompt", task.Id);
-    
+
     // For now, return a simple response indicating task was queued
     // TODO: In future, either wait for task completion or return task ID for polling
     return Results.Ok(new PromptAgentResponse
@@ -211,12 +213,91 @@ app.MapPost("/api/tasks", async (string goal, AgentDbContext db) =>
     return operation;
 });
 
-app.MapGet("/api/tasks/{id}", async (Guid id, AgentDbContext db) =>
+app.MapGet("/api/tasks", async (
+    Status? status,
+    string? userId,
+    IAgentTaskQueryService taskQueryService,
+    CancellationToken cancellationToken,
+    int page = 1,
+    int pageSize = 20) =>
 {
-    var task = await db.AgentTasks.FindAsync(id);
-    return task == null ? Results.NotFound() : Results.Ok(task);
+    var errors = ValidatePagination(page, pageSize);
+    if (errors is not null)
+    {
+        return Results.ValidationProblem(errors);
+    }
+
+    var response = await taskQueryService.GetTasksAsync(status, userId, page, pageSize, cancellationToken);
+    return Results.Ok(response);
 })
-.WithName("GetAgentTaskStatus");
+.WithName("ListAgentTasks")
+.WithTags("Tasks")
+.WithOpenApi(operation =>
+{
+    operation.Summary = "List tasks";
+    operation.Description = "Returns a paginated list of tasks with optional filtering by status and user.";
+
+    foreach (var parameter in operation.Parameters)
+    {
+        switch (parameter.Name)
+        {
+            case "status":
+                parameter.Description = "Optional status filter (Queued, Running, Thinking, Acting, Completed, Failed, Cancelled).";
+                break;
+            case "userId":
+                parameter.Description = "Optional user identifier that created the task.";
+                parameter.Example = new Microsoft.OpenApi.Any.OpenApiString("web-user");
+                break;
+            case "page":
+                parameter.Description = "Page number (1-based).";
+                parameter.Example = new Microsoft.OpenApi.Any.OpenApiInteger(1);
+                break;
+            case "pageSize":
+                parameter.Description = "Page size between 1 and 100.";
+                parameter.Example = new Microsoft.OpenApi.Any.OpenApiInteger(20);
+                break;
+        }
+    }
+
+    return operation;
+});
+
+app.MapGet("/api/tasks/stats", async (IAgentTaskQueryService taskQueryService, CancellationToken cancellationToken) =>
+{
+    var stats = await taskQueryService.GetStatsAsync(cancellationToken);
+    return Results.Ok(stats);
+})
+.WithName("GetAgentTaskStats")
+.WithTags("Tasks")
+.WithOpenApi(operation =>
+{
+    operation.Summary = "Get task statistics";
+    operation.Description = "Returns aggregate counts, success rate, execution timing, and database metrics for all tasks.";
+    return operation;
+});
+
+app.MapGet("/api/tasks/{id:guid}", async (Guid id, IAgentTaskQueryService taskQueryService, CancellationToken cancellationToken) =>
+{
+    var task = await taskQueryService.GetTaskAsync(id, cancellationToken);
+    if (task == null)
+    {
+        return Results.NotFound(new
+        {
+            error = $"Task {id} was not found.",
+            taskId = id
+        });
+    }
+
+    return Results.Ok(task);
+})
+.WithName("GetAgentTaskStatus")
+.WithTags("Tasks")
+.WithOpenApi(operation =>
+{
+    operation.Summary = "Get task details";
+    operation.Description = "Returns enriched details for a specific task including progress, timestamps, and database metadata.";
+    return operation;
+});
 
 // ---
 // 12. TELEMETRY ENDPOINTS (conditionally registered based on configuration)
@@ -258,3 +339,38 @@ startupLogger.LogInformation("📊 Swagger UI: {SwaggerUrl}", app.Environment.Is
 startupLogger.LogInformation("🔗 Health check: /api/agent/health");
 
 await app.RunAsync();
+
+static Dictionary<string, string[]>? ValidatePagination(int page, int pageSize)
+{
+    Dictionary<string, string[]>? errors = null;
+
+    if (page < 1)
+    {
+        errors = AddError(errors, "page", "Page must be greater than or equal to 1.");
+    }
+
+    if (pageSize < 1 || pageSize > 100)
+    {
+        errors = AddError(errors, "pageSize", "Page size must be between 1 and 100.");
+    }
+
+    return errors;
+}
+
+static Dictionary<string, string[]> AddError(Dictionary<string, string[]>? errors, string key, string message)
+{
+    errors ??= new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+    if (errors.TryGetValue(key, out var existing))
+    {
+        var merged = new string[existing.Length + 1];
+        existing.CopyTo(merged, 0);
+        merged[^1] = message;
+        errors[key] = merged;
+    }
+    else
+    {
+        errors[key] = new[] { message };
+    }
+
+    return errors;
+}

@@ -431,3 +431,14 @@ docker/.env
 
 
 !/DotnetAgents/DotnetAgents.Tests/bin/Debug/net9.0/TestResults/*
+.remote_instructions/ai_instruction_modules_index.json
+.remote_instructions/ai-core-instructions.md
+.remote_instructions/ai-executive-summary.md
+.remote_instructions/ai-iterative-guardrails-workflow.md
+.remote_instructions/ai-personal-preferences.md
+.remote_instructions/ai-quick-reference.md
+.remote_instructions/ai-quickstart.md
+.remote_instructions/ai-task-based-workflow.md
+.remote_instructions/ai-workflow-assignments.md
+.remote_instructions/ai-workflow-config.md
+.remote_instructions/perform-task.md
