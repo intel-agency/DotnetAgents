@@ -1,0 +1,47 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": ".NET Aspire AppHost",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "dotnet: build",
+            "program": "${workspaceFolder}/DotnetAgents/DotnetAgents.AppHost/bin/Debug/net9.0/DotnetAgents.AppHost.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/DotnetAgents/DotnetAgents.AppHost",
+            "stopAtEntry": false,
+            "console": "externalTerminal",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
+        {
+            "name": ".NET Agent API",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "dotnet: build",
+            "program": "${workspaceFolder}/DotnetAgents/DotnetAgents.AgentApi/bin/Debug/net9.0/DotnetAgents.AgentApi.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/DotnetAgents/DotnetAgents.AgentApi",
+            "stopAtEntry": false,
+            "console": "integratedTerminal",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
+        {
+            "name": ".NET Web Frontend",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "dotnet: build",
+            "program": "${workspaceFolder}/DotnetAgents/DotnetAgents.Web/bin/Debug/net9.0/DotnetAgents.Web.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/DotnetAgents/DotnetAgents.Web",
+            "stopAtEntry": false,
+            "console": "integratedTerminal",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        }
+    ]
+}

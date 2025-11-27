@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/DotnetAgents/">
+    <Project Path="DotnetAgents/IntelAgent.Tests/IntelAgent.Tests.csproj" />
+    <Project Path="DotnetAgents/IntelAgent/IntelAgent.csproj" />
+  </Folder>
+  <Project Path="IntelAgents.Cli/IntelAgents.Cli.csproj" />
+</Solution>

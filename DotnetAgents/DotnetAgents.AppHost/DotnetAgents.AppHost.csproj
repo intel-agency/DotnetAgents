@@ -10,7 +10,14 @@
     <UserSecretsId>529c3592-cdd9-4b6b-b957-a8c7dd87adb4</UserSecretsId>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <Optimize>false</Optimize>
+    <DebugType>full</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+
   <ItemGroup>
+    <ProjectReference Include="..\DotnetAgents.AgentApi\DotnetAgents.AgentApi.csproj" />
     <ProjectReference Include="..\DotnetAgents.ApiService\DotnetAgents.ApiService.csproj" />
     <ProjectReference Include="..\DotnetAgents.Web\DotnetAgents.Web.csproj" />
   </ItemGroup>

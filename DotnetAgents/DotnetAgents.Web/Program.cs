@@ -1,5 +1,6 @@
 using DotnetAgents.Web;
 using DotnetAgents.Web.Components;
+using DotnetAgents.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,12 +13,25 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddOutputCache();
 
-builder.Services.AddHttpClient<WeatherApiClient>(client =>
+builder.Services.AddHttpClient<AgentApiClient>(client =>
     {
         // This URL uses "https+http://" to indicate HTTPS is preferred over HTTP.
         // Learn more about service discovery scheme resolution at https://aka.ms/dotnet/sdschemes.
-        client.BaseAddress = new("https+http://apiservice");
+        client.BaseAddress = new("https+http://agentapi");
+        // Increase the timeout globally for AgentApiClient calls (default is 100s; set >30s as requested).
+        client.Timeout = TimeSpan.FromMinutes(2);
+    })
+    .AddStandardResilienceHandler(options =>
+    {
+        // Disable automatic retries to avoid duplicate prompt submissions in UI
+        options.Retry.MaxRetryAttempts = 0;
+        // Optionally, increase overall attempt timeout to align with HttpClient timeout
+        options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(2);
     });
+
+// Register the agent client service
+builder.Services.AddScoped<IAgentClientService, AgentClientService>();
+
 
 var app = builder.Build();
 

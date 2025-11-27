@@ -5,11 +5,43 @@
 			"type": "dotnet",
 			"task": "build",
 			"group": {
-				"kind": "build",
-				"isDefault": true
+				"kind": "build"
 			},
 			"problemMatcher": [],
 			"label": "dotnet: build"
+		},
+		{
+			"label": "build: Debug",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"build",
+				"${workspaceFolder}/DotnetAgents/DotnetAgents.slnx",
+				"--configuration",
+				"Debug"
+			],
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+		},
+		{
+			"label": "build: Release",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"build",
+				"${workspaceFolder}/DotnetAgents/DotnetAgents.slnx",
+				"--configuration",
+				"Release"
+			],
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"group": "build"
 		}
 	]
 }

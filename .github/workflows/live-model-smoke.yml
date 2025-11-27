@@ -1,0 +1,47 @@
+name: Live Model Smoke Test
+
+on:
+    schedule:
+        - cron: "0 9 * * *" # Daily at 09:00 UTC
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    probe:
+        if: github.repository_owner == 'intel-agency'
+        runs-on: ubuntu-22.04
+        env:
+            DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+            DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
+        steps:
+            - name: Validate secrets
+              env:
+                  OPENAI_API_KEY: ${{ secrets['OPENAI_API_KEY'] }}
+                  OPENAI_MODEL_NAME: ${{ secrets['OPENAI_MODEL_NAME'] }}
+              shell: bash
+              run: |
+                  if [[ -z "${OPENAI_API_KEY}" || -z "${OPENAI_MODEL_NAME}" ]]; then
+                    echo "Live probe skipped – secrets are not configured." >&2
+                    exit 78
+                  fi
+
+            - name: Checkout repository
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Setup .NET SDK
+              uses: actions/setup-dotnet@v4
+              with:
+                  global-json-file: global.json
+                  dotnet-version: 9.0.x
+
+            - name: Execute live model probe
+              env:
+                  OPENAI_API_KEY: ${{ secrets['OPENAI_API_KEY'] }}
+                  OPENAI_MODEL_NAME: ${{ secrets['OPENAI_MODEL_NAME'] }}
+                  OPENAI_ENDPOINT: ${{ secrets['OPENAI_ENDPOINT'] }}
+              shell: bash
+              run: dotnet run --project DotnetAgents/DotnetAgents/IntelAgent.LiveProbe/IntelAgent.LiveProbe.csproj --configuration Release

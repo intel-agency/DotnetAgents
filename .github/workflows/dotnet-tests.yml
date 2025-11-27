@@ -1,0 +1,135 @@
+name: .NET Build and Test
+
+on:
+  push:
+    branches:
+      - main
+      - testing-infra
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    concurrency:
+      group: coverage-${{ github.ref }}
+      cancel-in-progress: false
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
+      OPENAI_FIXTURE_PATH: ${{ github.workspace }}/tests/fixtures/openai/basic_chat.json
+      VERSION_PREFIX: ${{ vars.VERSION_PREFIX || '2025.11' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: 9.0.x
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/packages.lock.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore solution
+        run: dotnet restore DotnetAgents/DotnetAgents.slnx
+
+      - name: Run tests with coverage
+        run: dotnet test DotnetAgents/DotnetAgents.slnx --configuration Release --settings coverlet.runsettings --collect "XPlat Code Coverage" --logger "trx;LogFilePrefix=TestResults" --results-directory TestResults
+
+      - name: Summarize coverage
+        shell: pwsh
+        run: |
+          $coverageJson = Get-ChildItem -Path "${{ github.workspace }}"/TestResults -Recurse -Filter coverage.json | Select-Object -First 1
+          if (-not $coverageJson) {
+              throw "coverage.json was not produced by the test run."
+          }
+
+          $artifacts = Join-Path $PWD "artifacts"
+          New-Item -ItemType Directory -Path $artifacts -Force | Out-Null
+
+          $summaryPath = Join-Path $artifacts "coverage-summary.json"
+          $version = "${{ github.ref_name }}-${{ env.VERSION_PREFIX }}.${{ github.run_number }}"
+          & ./scripts/coverage/export-summary.ps1 -CoverageJsonPath $coverageJson.FullName -Branch "${{ github.ref_name }}" -Version $version -OutputPath $summaryPath
+
+      - name: Enforce minimum coverage floor
+        shell: pwsh
+        run: |
+          $summary = Get-Content ./artifacts/coverage-summary.json -Raw | ConvertFrom-Json
+          $baseline = Get-Content ./coverage-baseline.json -Raw | ConvertFrom-Json
+          $minimum = if ($baseline.minimumLine) { [double]$baseline.minimumLine } elseif ($baseline.line -ge 50) { 50 } else { 0 }
+
+          if ($minimum -eq 0) {
+              Write-Host "Minimum coverage floor not yet active (current line coverage: $($summary.line))."
+          }
+          elseif ($summary.line -lt $minimum) {
+              throw "Overall line coverage dropped below enforced floor of $minimum (current: $($summary.line))."
+          }
+
+      - name: Verify coverage against baseline
+        shell: pwsh
+        run: |
+          $baseline = Get-Content ./coverage-baseline.json -Raw | ConvertFrom-Json
+          if ($baseline.line -gt 0) {
+              & ./scripts/coverage/verify-thresholds.ps1 -BaselinePath ./coverage-baseline.json -CurrentPath ./artifacts/coverage-summary.json
+          }
+          else {
+              Write-Host "Baseline not yet established; skipping regression guard."
+          }
+
+      - name: Merge coverage history
+        shell: pwsh
+        run: |
+          $historyOutput = Join-Path $PWD "artifacts/coverage-history.json"
+          $existingPath = Join-Path $Env:RUNNER_TEMP "coverage-history.json"
+
+          git fetch origin gh-pages --depth=1 2>$null || Write-Host "gh-pages branch not found"
+
+          $historyExists = $false
+          if (git branch -r --list origin/gh-pages | Where-Object { $_ }) {
+              $historyFile = "pages/${{ github.ref_name }}/coverage-history.json"
+              try {
+                  git show origin/gh-pages:$historyFile | Out-File -FilePath $existingPath -Encoding utf8
+                  $historyExists = Test-Path -LiteralPath $existingPath
+              }
+              catch {
+                  Write-Host "No prior coverage history for branch ${{ github.ref_name }}."
+              }
+          }
+
+            if ($historyExists) {
+              & ./scripts/coverage/merge-history.ps1 -Branch "${{ github.ref_name }}" -NewRunPath ./artifacts/coverage-summary.json -ExistingHistoryPath $existingPath -OutputPath $historyOutput
+            }
+            else {
+              & ./scripts/coverage/merge-history.ps1 -Branch "${{ github.ref_name }}" -NewRunPath ./artifacts/coverage-summary.json -OutputPath $historyOutput
+            }
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-test-results
+          path: TestResults
+          if-no-files-found: ignore
+
+      - name: Upload coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-artifacts
+          path: |
+            artifacts/coverage-summary.json
+            artifacts/coverage-history.json
+          if-no-files-found: ignore
